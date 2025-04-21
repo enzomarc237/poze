@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:process_run/process_run.dart';
 import '../models/system_stats.dart';
 
@@ -9,6 +10,7 @@ class SystemService {
   // Obtenir les statistiques système globales
   Future<SystemStats> getSystemStats() async {
     try {
+      // Revert to fetching stats with separate commands to avoid quoting issues
       double cpuUsage = await _getCpuUsage();
       int appCount = await _getGuiAppCount();
       String osVersion = await _getOsVersion();
@@ -20,7 +22,7 @@ class SystemService {
         timestamp: DateTime.now(),
       );
     } catch (e) {
-      print('Erreur lors de la récupération des statistiques système: $e');
+      // print('Erreur lors de la récupération des statistiques système: $e');
       return SystemStats.initial();
     }
   }
@@ -48,7 +50,7 @@ class SystemService {
 
       return 0.0;
     } catch (e) {
-      print('Erreur lors de la récupération de l\'utilisation CPU: $e');
+      // print('Erreur lors de la récupération de l\'utilisation CPU: $e');
       return 0.0;
     }
   }
@@ -63,7 +65,7 @@ class SystemService {
       final countText = result.outText.trim();
       return int.tryParse(countText) ?? 0;
     } catch (e) {
-      print('Erreur lors du comptage des applications: $e');
+      // print('Erreur lors du comptage des applications: $e');
       return 0;
     }
   }
@@ -74,7 +76,7 @@ class SystemService {
       final result = await _shell.run('sw_vers -productVersion');
       return 'macOS ${result.outText.trim()}';
     } catch (e) {
-      print('Erreur lors de la récupération de la version du système: $e');
+      // print('Erreur lors de la récupération de la version du système: $e');
       return 'macOS';
     }
   }

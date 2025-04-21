@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart'; // Import CupertinoIcons
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import '../models/process_model.dart';
@@ -46,14 +49,25 @@ class ProcessListItem extends StatelessWidget {
               children: [
                 Text(
                   process.name,
-                  style: MacosTheme.of(context).typography.title2.copyWith(fontWeight: FontWeight.w600),
+                  style: MacosTheme.of(
+                    context,
+                  ).typography.title2.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
-                Row(children: [
-                  Icon(Icons.memory, size: 14, color: MacosColors.systemGrayColor),
-                  const SizedBox(width: 4),
-                  Text('PID: ${process.pid}', style: MacosTheme.of(context).typography.caption1),
-                ]),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.memory,
+                      size: 14,
+                      color: MacosColors.systemGrayColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'PID: ${process.pid}',
+                      style: MacosTheme.of(context).typography.caption1,
+                    ),
+                  ],
+                ),
                 Text(
                   process.command.length > 50
                       ? '${process.command.substring(0, 50)}...'
@@ -73,6 +87,20 @@ class ProcessListItem extends StatelessWidget {
   }
 
   Widget _buildLeadingIcon() {
+    if (process.iconPath != null && process.iconPath!.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.file(
+          File(process.iconPath!),
+          width: 36,
+          height: 36,
+          fit: BoxFit.cover,
+          errorBuilder:
+              (context, error, stackTrace) =>
+                  const Icon(Icons.apps, color: Colors.white, size: 20),
+        ),
+      );
+    }
     return Container(
       width: 36,
       height: 36,
@@ -80,7 +108,7 @@ class ProcessListItem extends StatelessWidget {
         color: _getProcessColor(),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Icon(Icons.app_registration, color: Colors.white, size: 20),
+      child: const Icon(Icons.apps, color: Colors.white, size: 20),
     );
   }
 
@@ -112,13 +140,34 @@ class ProcessListItem extends StatelessWidget {
   }
 
   Widget _buildActionButton(BuildContext context) {
+    final bool isDarkMode =
+        MacosTheme.of(context).brightness == Brightness.dark;
+    final Color playColor = MacosColors.systemGreenColor;
+    final Color pauseColor = MacosColors.systemOrangeColor;
+    // Use a contrasting icon color based on theme brightness
+    final Color iconColor = isDarkMode ? MacosColors.black : MacosColors.white;
+
     return PushButton(
       controlSize: ControlSize.small,
       onPressed: process.isPaused ? onResume : onPause,
+      color:
+          process.isPaused ? playColor : pauseColor, // Change background color
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ), // Adjust padding if needed
       child:
           process.isPaused
-              ? const Icon(Icons.play_arrow, size: 16)
-              : const Icon(Icons.pause, size: 16),
+              ? Icon(
+                CupertinoIcons.play_arrow_solid,
+                size: 14,
+                color: iconColor,
+              ) // Use Cupertino icon
+              : Icon(
+                CupertinoIcons.pause_solid,
+                size: 14,
+                color: iconColor,
+              ), // Use Cupertino icon
     );
   }
 

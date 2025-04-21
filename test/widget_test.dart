@@ -7,24 +7,20 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:poze/main.dart';
+import 'package:macos_ui/macos_ui.dart';
+import 'package:poze/app.dart'; // Import the App widget
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  // Basic test to ensure the app builds without crashing
+  testWidgets('App builds smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    // Use the actual root widget 'App' instead of 'MyApp'
+    await tester.pumpWidget(const App()); 
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Example: Verify that the HomeView is initially displayed
+    // (You might need more specific finders based on your UI)
+    expect(find.byType(MacosWindow), findsOneWidget); 
+    // Add more specific checks if needed, e.g., finding the toolbar title
+    // expect(find.text('Poze - Gestionnaire d\'Applications'), findsOneWidget);
   });
 }

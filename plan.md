@@ -1,95 +1,166 @@
-# Plan de développement pour l'application Poze
+# Poze App — Unified Development Plan & Roadmap
 
-## Aperçu du projet
-Poze est une application Flutter pour macOS qui permet de gérer les processus en cours d'exécution sur le système. Elle offre la possibilité de visualiser les applications actives, leur utilisation du processeur, ainsi que de mettre en pause et de reprendre ces applications.
+This document merges the technical plan and feature roadmap for Poze, a modern macOS process manager built with Flutter. Use this as a reference for architecture, implementation, and future enhancements.
 
-## Fonctionnalités principales
-1. Lister toutes les applications en cours d'exécution
-2. Afficher le pourcentage d'utilisation du processeur pour chaque application
-3. Mettre en pause une application via la commande "killall -STOP"
-4. Sortir une application de la pause via la commande "killall -CONT"
+---
 
-## Structure du projet
+## Project Overview
+Poze is a Flutter/macOS application for managing system processes. It provides real-time process listing, CPU usage stats, and controls to pause/resume applications, all with a modern, minimal UI.
 
+---
+
+## Core Features (Current)
+- List all running processes with name, PID, command, and CPU usage
+- Show system info (macOS version, total processes, CPU usage, last update)
+- Pause/resume processes (via `killall -STOP` / `killall -CONT`)
+- Manual and auto-refresh
+- Minimal, icon-only sidebar navigation
+- Modern, native macOS look and feel
+- System tray integration (show/hide, quit)
+- Settings view (dark mode, refresh interval, etc.)
+
+---
+
+## Project Structure
 ```
 lib/
-├── main.dart                  # Point d'entrée de l'application
-├── app.dart                   # Configuration de l'application
+├── main.dart                  # App entry point
+├── app.dart                   # App configuration
 ├── models/
-│   ├── process_model.dart     # Modèle de données pour les processus
-│   └── system_stats.dart      # Modèle pour les statistiques système
+│   ├── process_model.dart     # Data model for processes
+│   └── system_stats.dart      # System statistics model
 ├── services/
-│   ├── process_service.dart   # Service pour interagir avec les processus
-│   └── system_service.dart    # Service pour obtenir les stats système
+│   ├── process_service.dart   # Process interaction service
+│   └── system_service.dart    # System stats service
 ├── views/
-│   ├── home_view.dart         # Vue principale
-│   └── settings_view.dart     # Vue des paramètres (optionnelle)
+│   ├── home_view.dart         # Main view
+│   └── settings_view.dart     # Settings view
 └── widgets/
-    ├── process_list_item.dart # Widget pour afficher un processus
-    ├── cpu_usage_chart.dart   # Widget pour afficher l'usage CPU
-    └── control_buttons.dart   # Widgets pour les actions (pause/reprise)
+    ├── process_list_item.dart # Process display widget
+    ├── cpu_usage_chart.dart   # CPU usage chart widget
+    └── control_buttons.dart   # Action buttons
 ```
 
-## Dépendances requises
+---
+
+## Dependencies
 ```yaml
 dependencies:
   flutter:
     sdk: flutter
-  macos_ui: ^2.0.0            # UI style macOS
-  process_run: ^0.14.0        # Pour exécuter des commandes shell
-  charts_flutter: ^0.12.0     # Pour les graphiques de CPU (optionnel)
-  provider: ^6.1.1            # Pour la gestion d'état
+  macos_ui: ^2.0.0            # macOS-style UI
+  process_run: ^0.14.0        # Shell command execution
+  provider: ^6.1.1            # State management
+  shared_preferences: ^2.5.3  # Settings persistence
+  tray_manager: ^0.2.2        # System tray integration
+  # charts_flutter: ^0.12.0   # (optional, for advanced charts)
 ```
 
-## Étapes d'implémentation
+---
 
-### Phase 1: Configuration initiale
-1. Configurer le projet avec les dépendances nécessaires
-2. Créer la structure de base de l'application avec macos_ui
-3. Implémenter l'interface utilisateur selon le design fourni
+## Implementation Phases
 
-### Phase 2: Fonctionnalités de base
-1. Implémenter le service pour lister les processus en cours (via `ps` ou autre commande système)
-2. Créer le modèle de données pour représenter les processus
-3. Développer l'interface pour afficher la liste des processus
+### Phase 1: Initial Setup
+- Configure project and dependencies
+- Create base app structure with macos_ui
+- Implement core UI per design
 
-### Phase 3: Fonctionnalités avancées
-1. Ajouter la fonctionnalité pour obtenir l'utilisation CPU par processus
-2. Implémenter les commandes pour mettre en pause (`killall -STOP`) et reprendre (`killall -CONT`) les processus
-3. Créer les contrôles UI pour ces actions
+### Phase 2: Core Functionality
+- Service to list running processes (via `ps`/`top`)
+- Data models for processes and system stats
+- UI to display process list and system info
 
-### Phase 4: Améliorations et finition
-1. Peaufiner l'interface utilisateur
-2. Ajouter des animations et transitions
-3. Optimiser les performances et la réactivité
-4. Tests et corrections des bugs
+### Phase 3: Advanced Features
+- Show CPU usage per process
+- Pause/resume processes (`killall -STOP`/`-CONT`)
+- UI controls for actions
 
-## Détails techniques
+### Phase 4: Polish & Performance
+- UI refinement and animations
+- Performance optimization
+- Bug fixes and testing
 
-### Commandes système utilisées
-- `ps aux` - Pour lister les processus
-- `top -l 1 -stats pid,command,cpu` - Pour obtenir l'utilisation CPU
-- `killall -STOP [processName]` - Pour mettre en pause un processus
-- `killall -CONT [processName]` - Pour sortir un processus de la pause
+---
 
-### Considérations pour macOS
-- Demander les permissions nécessaires pour accéder aux informations système
-- Vérifier la compatibilité avec les différentes versions de macOS
-- S'assurer que l'application fonctionne correctement dans un environnement de sandbox
+## System Commands Used
+- `ps aux` — List processes
+- `top -l 1 -stats pid,command,cpu` — CPU usage
+- `killall -STOP [processName]` — Pause process
+- `killall -CONT [processName]` — Resume process
 
-## Interface utilisateur
-Basée sur l'image fournie, l'interface aura:
-- Une barre latérale avec les différentes catégories ou vues
-- Une liste principale des processus avec:
-  - Icône/identifiant du processus
-  - Nom du processus
-  - Description ou détails supplémentaires
-  - Boutons de contrôle (pause/reprise)
-  - Indicateur d'utilisation CPU
-- Des contrôles de filtrage et de tri
+---
 
-## Prochaines étapes potentielles
-- Ajout d'une fonctionnalité de recherche
-- Support pour les notifications
-- Historique d'utilisation du CPU
-- Profils de gestion de processus personnalisés
+## User Interface
+- Minimal, icon-only sidebar for navigation
+- Main list: process icon, name, PID, command, CPU usage bar, control buttons
+- Filtering, sorting, and search (planned)
+- Responsive, macOS-native look
+
+---
+
+## Planned Enhancements & Features
+### Process Management
+- [ ] Terminate (kill) processes with confirmation
+- [ ] Batch actions (pause/kill multiple)
+- [ ] Detailed process info (memory, threads, open files)
+- [ ] Search/filter/sort processes
+
+### System Monitoring
+- [ ] Live CPU/memory/network/disk charts
+- [ ] Per-process resource graphs
+- [ ] Notifications for high resource usage
+- [ ] Quick stats in tray menu
+
+### UI/UX
+- [ ] List animations, hover/selection
+- [ ] More themes, accent color selection
+- [ ] Compact/expanded views
+- [ ] Keyboard shortcuts
+- [ ] Accessibility improvements
+
+### Sidebar & Navigation
+- [ ] Sidebar reordering (if more sections)
+- [ ] More sidebar items (logs, performance, favorites)
+- [ ] Tooltips for sidebar icons
+
+### Settings & Customization
+- [ ] Configurable columns
+- [ ] Custom auto-refresh intervals
+- [ ] Export process list (CSV, JSON)
+- [ ] Localization
+
+### Advanced & Power User
+- [ ] AppleScript/Automator integration
+- [ ] CLI companion
+- [ ] Plugin/add-on system
+
+### Stretch Goals
+- [ ] Remote monitoring
+- [ ] Mobile companion app
+- [ ] Cloud sync of settings
+
+---
+
+## Technical & macOS Considerations
+- Request necessary permissions for system info
+- Ensure compatibility with macOS versions
+- Sandbox compliance
+- All destructive actions require confirmation dialogs
+
+---
+
+## Next Steps (Potential)
+- Add search functionality
+- Support notifications
+- CPU usage history
+- Custom process management profiles
+
+---
+
+## Notes
+- Prioritize stability, security, and privacy
+- Keep UI minimal, fast, and native
+
+---
+
+_Last updated: 2025-04-18_

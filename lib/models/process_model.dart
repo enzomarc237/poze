@@ -4,6 +4,7 @@ class ProcessModel {
   final String command;
   final double cpuUsage;
   final bool isPaused;
+  final String? iconPath; // Path to the app icon
 
   ProcessModel({
     required this.pid,
@@ -11,6 +12,7 @@ class ProcessModel {
     required this.command,
     required this.cpuUsage,
     this.isPaused = false,
+    this.iconPath,
   });
 
   // Cette méthode n'est plus utilisée car nous n'utilisons plus ps aux
@@ -51,6 +53,7 @@ class ProcessModel {
       name: name,
       command: name, // Pour les applications GUI, on utilise simplement le nom
       cpuUsage: cpuUsage,
+      iconPath: null, // Initially set to null, will be fetched later
     );
   }
 
@@ -65,6 +68,7 @@ class ProcessModel {
     String? command,
     double? cpuUsage,
     bool? isPaused,
+    String? iconPath,
   }) {
     return ProcessModel(
       pid: pid ?? this.pid,
@@ -72,6 +76,7 @@ class ProcessModel {
       command: command ?? this.command,
       cpuUsage: cpuUsage ?? this.cpuUsage,
       isPaused: isPaused ?? this.isPaused,
+      iconPath: iconPath ?? this.iconPath,
     );
   }
 }

@@ -1,10 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:io';
 import 'package:process_run/process_run.dart';
 import '../models/process_model.dart';
 
 class ProcessService {
-  final _shell = Shell();
+  // Ensure commands run within a shell environment
+  final _shell = Shell(runInShell: true);
+
+  // Cache for app icons to avoid repeated AppleScript calls
+  final Map<String, String?> _iconPathCache = {};
 
   // Récupérer uniquement les applications GUI lancées par l'utilisateur
   Future<List<ProcessModel>> getRunningProcesses() async {
@@ -41,7 +45,7 @@ class ProcessService {
 
       return processes;
     } catch (e) {
-      print('Erreur lors de la récupération des applications: $e');
+      // print('Erreur lors de la récupération des applications: $e');
       return [];
     }
   }
@@ -57,50 +61,194 @@ class ProcessService {
 
       return double.tryParse(lines.first.trim()) ?? 0.0;
     } catch (e) {
-      print('Erreur lors de la récupération de l\'utilisation CPU: $e');
+      // print('Erreur lors de la récupération de l\'utilisation CPU: $e');
       return 0.0;
     }
   }
 
-  // Obtenir l'utilisation CPU détaillée pour toutes les applications GUI
+  // Get the icon path for a given application name using AppleScript, with caching
+  Future<String?> _getAppIconPath(String appName) async {
+    if (_iconPathCache.containsKey(appName)) {
+      print("Cached icon for $appName: \\${_iconPathCache[appName]}");
+      return _iconPathCache[appName];
+    }
+    try {
+      // Get the bundle path of the app
+      final script = '''
+        tell application "System Events"
+          set appProc to first process whose name is "${appName.replaceAll('"', '\\"')}"
+          set appPath to (POSIX path of (file of appProc))
+        end tell
+        return appPath
+      ''';
+      // Write to a temp file to avoid AppleScript escaping issues
+      final tempDir = Directory.systemTemp;
+      final tempScriptFile = File(
+        '${tempDir.path}/poze_icon_script_${DateTime.now().millisecondsSinceEpoch}.applescript',
+      );
+      await tempScriptFile.writeAsString(script);
+      final results = await _shell.run('osascript "${tempScriptFile.path}"');
+      await tempScriptFile.delete();
+      if (results.isEmpty || results.first.exitCode != 0) {
+        _iconPathCache[appName] = null;
+        return null;
+      }
+      final appPath = results.first.outText.trim();
+      if (appPath.isEmpty) {
+        _iconPathCache[appName] = null;
+        return null;
+      }
+      // Try to find the icon file
+      final iconPath = '$appPath/Contents/Resources/AppIcon.icns';
+      if (await File(iconPath).exists()) {
+        _iconPathCache[appName] = iconPath;
+        return iconPath;
+      }
+      // Fallback: try generic app icon
+      final genericIcon = '$appPath/Contents/Resources/${appName}.icns';
+      if (await File(genericIcon).exists()) {
+        _iconPathCache[appName] = genericIcon;
+        return genericIcon;
+      }
+      _iconPathCache[appName] = null;
+      return null;
+    } catch (e) {
+      print(
+        'Erreur lors de la récupération de l\'icône de l\'application: $e',
+      ); // Only keep this print for appIcon
+      _iconPathCache[appName] = null;
+      return null;
+    }
+  }
+
+  // Version optimisée pour obtenir l'utilisation CPU détaillée pour toutes les applications GUI
   Future<List<ProcessModel>> getProcessesWithCpuUsage() async {
     try {
-      // Récupérer la liste des applications GUI directement
-      final appListResult = await _shell.run(
-        'osascript -e \'tell application "System Events" to get the name of every process whose background only is false\'',
-      );
-      final appNames = appListResult.outText.trim().split(', ');
+      // Utiliser un script AppleScript plus complet pour obtenir les noms et PIDs en une seule commande
+      final script = '''
+        tell application "System Events"
+          set appList to {}
+          set processList to every process whose background only is false
+          repeat with proc in processList
+            set procName to name of proc
+            set procId to unix id of proc
+            set end of appList to procName & ":" & procId
+          end repeat
+          return appList
+        end tell
+      ''';
 
-      final List<ProcessModel> processes = [];
+      File? tempScriptFile;
+      ProcessResult? appListResult;
 
-      // Pour chaque application, obtenir son PID et l'utilisation CPU
-      for (final appName in appNames) {
-        try {
-          final sanitizedName = appName.replaceAll('"', '\\"');
+      try {
+        // Create a temporary file
+        final tempDir = Directory.systemTemp;
+        tempScriptFile = File(
+          '${tempDir.path}/poze_script_${DateTime.now().millisecondsSinceEpoch}.applescript',
+        );
 
-          // Obtenir le PID pour cette application
-          final pidResult = await _shell.run(
-            'osascript -e \'tell application "System Events" to get unix id of process "$sanitizedName"\'',
-          );
+        // Write the script to the temporary file
+        await tempScriptFile.writeAsString(script);
 
-          if (pidResult.outText.trim().isEmpty) continue;
+        // Execute osascript with the file path using run() which uses the shell
+        final results = await _shell.run('osascript "${tempScriptFile.path}"');
 
-          final pid = pidResult.outText.trim();
-          final cpuUsage = await _getProcessCpuUsage(pid);
-
-          processes.add(
-            ProcessModel(
-              pid: pid,
-              name: appName,
-              command: appName,
-              cpuUsage: cpuUsage,
-            ),
-          );
-        } catch (e) {
-          print('Erreur lors du traitement de l\'application $appName: $e');
-          // Continuer avec la prochaine application
-          continue;
+        // Check for errors in the results list
+        if (results.any((result) => result.exitCode != 0)) {
+          final errorOutput = results.map((r) => r.errText).join('\n');
+          // Clean up before throwing
+          try {
+            await tempScriptFile.delete();
+          } catch (_) {}
+          throw Exception('AppleScript execution failed: $errorOutput');
         }
+
+        // Assuming the first result contains the output
+        appListResult = results.first;
+
+        // Original check (redundant now but kept for safety)
+        if (appListResult.exitCode != 0) {
+          throw Exception(
+            'AppleScript execution failed: ${appListResult.errText}',
+          );
+        }
+      } finally {
+        // Ensure the temporary file is deleted
+        try {
+          await tempScriptFile?.delete();
+        } catch (e) {
+          // print('Error deleting temporary script file: $e');
+        }
+      }
+
+      final appInfoList = appListResult.outText.trim().split(', ');
+
+      // Obtenir l'utilisation CPU pour tous les processus en une seule commande
+      final allPids = <String>[];
+      final nameByPid = <String, String>{};
+
+      for (final appInfo in appInfoList) {
+        final parts = appInfo.split(':');
+        if (parts.length == 2) {
+          final name = parts[0];
+          final pid = parts[1];
+          allPids.add(pid);
+          nameByPid[pid] = name;
+        }
+      }
+
+      if (allPids.isEmpty) return [];
+
+      // Obtenir l'utilisation CPU pour tous les PIDs en une seule commande
+      final cpuResult = await _shell.run(
+        'ps -o pid,%cpu -p ${allPids.join(',')}',
+      );
+      final cpuLines = cpuResult.outLines.skip(1).toList(); // Skip header
+
+      final pidToCpu = <String, double>{};
+      for (final line in cpuLines) {
+        final parts = line.trim().split(RegExp(r'\s+'));
+        if (parts.length >= 2) {
+          final pid = parts[0];
+          final cpu = double.tryParse(parts[1]) ?? 0.0;
+          pidToCpu[pid] = cpu;
+        }
+      }
+
+      // Vérifier l'état de pause pour tous les processus en une seule commande
+      final stateResult = await _shell.run(
+        'ps -o pid,state -p ${allPids.join(',')}',
+      );
+      final stateLines = stateResult.outLines.skip(1).toList(); // Skip header
+
+      final pidToState = <String, String>{};
+      for (final line in stateLines) {
+        final parts = line.trim().split(RegExp(r'\s+'));
+        if (parts.length >= 2) {
+          final pid = parts[0];
+          final state = parts[1];
+          pidToState[pid] = state;
+        }
+      }
+
+      // Construire la liste des processus
+      final processes = <ProcessModel>[];
+      for (final pid in allPids) {
+        final name = nameByPid[pid] ?? 'Unknown';
+        final cpuUsage = pidToCpu[pid] ?? 0.0;
+        final isPaused = pidToState[pid] == 'T';
+        final iconPath = await _getAppIconPath(name);
+        processes.add(
+          ProcessModel(
+            pid: pid,
+            name: name,
+            command: name,
+            cpuUsage: cpuUsage,
+            isPaused: isPaused,
+            iconPath: iconPath,
+          ),
+        );
       }
 
       // Trier par utilisation CPU
@@ -108,7 +256,7 @@ class ProcessService {
 
       return processes;
     } catch (e) {
-      print('Erreur lors de la récupération des applications: $e');
+      // print('Erreur lors de la récupération des applications: $e');
       return [];
     }
   }
@@ -119,7 +267,7 @@ class ProcessService {
       final results = await _shell.run('killall -STOP "$processName"');
       return results.every((result) => result.exitCode == 0);
     } catch (e) {
-      print('Erreur lors de la mise en pause du processus: $e');
+      // print('Erreur lors de la mise en pause du processus: $e');
       return false;
     }
   }
@@ -130,21 +278,33 @@ class ProcessService {
       final results = await _shell.run('killall -CONT "$processName"');
       return results.every((result) => result.exitCode == 0);
     } catch (e) {
-      print('Erreur lors de la reprise du processus: $e');
+      // print('Erreur lors de la reprise du processus: $e');
       return false;
     }
   }
 
-  // Vérifier si un processus est en pause
-  Future<bool> isProcessPaused(String pid) async {
+  // Vérifier l'état de pause pour plusieurs processus en une seule commande
+  Future<Map<String, bool>> areProcessesPaused(List<String> pids) async {
+    if (pids.isEmpty) return {};
+
     try {
-      // Utiliser ps pour vérifier l'état du processus
-      final result = await _shell.run('ps -o state= -p $pid');
-      // T indique généralement un processus arrêté/en pause
-      return result.outText.trim() == 'T';
+      final result = await _shell.run('ps -o pid,state -p ${pids.join(',')}');
+      final lines = result.outLines.skip(1); // Skip header
+
+      final pauseStates = <String, bool>{};
+      for (final line in lines) {
+        final parts = line.trim().split(RegExp(r'\s+'));
+        if (parts.length >= 2) {
+          final pid = parts[0];
+          final state = parts[1];
+          pauseStates[pid] = state == 'T';
+        }
+      }
+
+      return pauseStates;
     } catch (e) {
-      print('Erreur lors de la vérification de l\'état du processus: $e');
-      return false;
+      // print('Erreur lors de la vérification de l\'état des processus: $e');
+      return {};
     }
   }
 }

@@ -8,6 +8,7 @@ import '../models/process_model.dart';
 import '../models/system_stats.dart';
 import '../services/process_service.dart';
 import '../services/system_service.dart';
+import '../services/background_fetch_service.dart';
 import '../widgets/process_list_item.dart';
 import '../widgets/cpu_usage_chart.dart';
 import '../app.dart';
@@ -22,17 +23,61 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   final ProcessService _processService = ProcessService();
   final SystemService _systemService = SystemService();
+  final BackgroundFetchService _backgroundFetchService =
+      BackgroundFetchService();
 
   List<ProcessModel> _processes = [];
   SystemStats _systemStats = SystemStats.initial();
   Timer? _refreshTimer;
   bool _isLoading = true;
   String _searchQuery = '';
+  StreamSubscription? _processDataSubscription;
+  StreamSubscription? _systemDataSubscription;
+  StreamSubscription? _errorSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _initializeBackgroundService();
+  }
+
+  Future<void> _initializeBackgroundService() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    await _backgroundFetchService.initialize();
+
+    // Subscribe to process data updates
+    _processDataSubscription = _backgroundFetchService.processDataStream.listen(
+      (processes) {
+        setState(() {
+          _processes = processes;
+          _isLoading = false;
+        });
+      },
+    );
+
+    // Subscribe to system stats updates
+    _systemDataSubscription = _backgroundFetchService.systemDataStream.listen((
+      stats,
+    ) {
+      setState(() {
+        _systemStats = stats;
+      });
+    });
+
+    // Subscribe to error messages
+    _errorSubscription = _backgroundFetchService.errorStream.listen((errorMsg) {
+      if (mounted) {
+        _showErrorDialog('Erreur lors du chargement des données: $errorMsg');
+      }
+    });
+
+    // Initial data fetch
+    _backgroundFetchService.fetchData();
+
+    // Start auto-refresh
     _startAutoRefresh();
   }
 
@@ -46,6 +91,10 @@ class _HomeViewState extends State<HomeView> {
   @override
   void dispose() {
     _cancelRefreshTimer();
+    _processDataSubscription?.cancel();
+    _systemDataSubscription?.cancel();
+    _errorSubscription?.cancel();
+    _backgroundFetchService.dispose();
     super.dispose();
   }
 
@@ -64,57 +113,18 @@ class _HomeViewState extends State<HomeView> {
     if (appState.autoRefresh) {
       _refreshTimer = Timer.periodic(
         Duration(seconds: appState.refreshInterval),
-        (_) => _loadData(),
+        (_) => _backgroundFetchService.fetchData(),
       );
     }
   }
 
+  // Manual refresh function that triggers background fetch
   Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
     });
 
-    try {
-      final processes = await _processService.getProcessesWithCpuUsage();
-      final systemStats = await _systemService.getSystemStats();
-
-      // Vérifier l'état de pause pour chaque processus
-      for (int i = 0; i < processes.length; i++) {
-        final process = processes[i];
-        final isPaused = await _processService.isProcessPaused(process.pid);
-        if (isPaused) {
-          processes[i] = process.copyWith(isPaused: true);
-        }
-      }
-
-      setState(() {
-        _processes = processes;
-        _systemStats = systemStats;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Afficher un message d'erreur
-      if (mounted) {
-        showMacosAlertDialog(
-          context: context,
-          builder:
-              (_) => MacosAlertDialog(
-                appIcon: const FlutterLogo(),
-                title: const Text('Erreur'),
-                message: Text('Impossible de charger les données: $e'),
-                primaryButton: PushButton(
-                  controlSize: ControlSize.regular,
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ),
-        );
-      }
-    }
+    _backgroundFetchService.fetchData();
   }
 
   Future<void> _pauseProcess(ProcessModel process) async {
@@ -191,14 +201,20 @@ class _HomeViewState extends State<HomeView> {
           toolBar: ToolBar(
             title: const Text('Poze - Gestionnaire d\'Applications'),
             titleWidth: 300,
-            leading: MacosIconButton(
-              icon: const MacosIcon(CupertinoIcons.settings),
-              onPressed: () => Navigator.push(
-                context,
-                CupertinoPageRoute(builder: (context) => const SettingsView()),
-              ),
-            ),
             actions: [
+              ToolBarIconButton(
+                icon: const MacosIcon(CupertinoIcons.settings_solid),
+                label: "Paramètres",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    CupertinoPageRoute(
+                      builder: (context) => const SettingsView(),
+                    ),
+                  );
+                },
+                showLabel: false,
+              ),
               ToolBarIconButton(
                 icon: const MacosIcon(CupertinoIcons.refresh),
                 label: "Rafraîchir",
