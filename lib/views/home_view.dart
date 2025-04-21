@@ -195,6 +195,10 @@ class _HomeViewState extends State<HomeView> {
           _startAutoRefresh();
         } else if (_refreshTimer != null && !appState.autoRefresh) {
           _cancelRefreshTimer();
+        } else if (_refreshTimer != null && appState.autoRefresh) {
+          // If refreshInterval changed, restart timer
+          _cancelRefreshTimer();
+          _startAutoRefresh();
         }
 
         return MacosScaffold(

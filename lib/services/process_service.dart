@@ -66,7 +66,7 @@ class ProcessService {
     }
   }
 
-  // Get the icon path for a given application name using AppleScript, with caching
+  // Get the icon path for a given application name using AppleScript, with caching and PNG conversion
   Future<String?> _getAppIconPath(String appName) async {
     if (_iconPathCache.containsKey(appName)) {
       print("Cached icon for $appName: \\${_iconPathCache[appName]}");
@@ -100,18 +100,39 @@ class ProcessService {
       }
       // Try to find the icon file
       final iconPath = '$appPath/Contents/Resources/AppIcon.icns';
+      String? icnsPath;
       if (await File(iconPath).exists()) {
-        _iconPathCache[appName] = iconPath;
-        return iconPath;
+        icnsPath = iconPath;
+      } else {
+        // Fallback: try generic app icon
+        final genericIcon = '$appPath/Contents/Resources/${appName}.icns';
+        if (await File(genericIcon).exists()) {
+          icnsPath = genericIcon;
+        }
       }
-      // Fallback: try generic app icon
-      final genericIcon = '$appPath/Contents/Resources/${appName}.icns';
-      if (await File(genericIcon).exists()) {
-        _iconPathCache[appName] = genericIcon;
-        return genericIcon;
+      if (icnsPath == null) {
+        _iconPathCache[appName] = null;
+        return null;
       }
-      _iconPathCache[appName] = null;
-      return null;
+      // Convert .icns to .png using sips (macOS built-in)
+      final pngPath =
+          '${tempDir.path}/poze_icon_${appName.replaceAll(' ', '_')}.png';
+      final sipsResult = await Process.run('sips', [
+        '-s',
+        'format',
+        'png',
+        icnsPath,
+        '--out',
+        pngPath,
+      ]);
+      if (sipsResult.exitCode == 0 && await File(pngPath).exists()) {
+        _iconPathCache[appName] = pngPath;
+        return pngPath;
+      } else {
+        // If conversion fails, fallback to .icns (will not display in Flutter)
+        _iconPathCache[appName] = icnsPath;
+        return icnsPath;
+      }
     } catch (e) {
       print(
         'Erreur lors de la récupération de l\'icône de l\'application: $e',
@@ -306,5 +327,36 @@ class ProcessService {
       // print('Erreur lors de la vérification de l\'état des processus: $e');
       return {};
     }
+  }
+
+  // Call this on app startup to load any previously cached PNG icons
+  Future<void> loadPersistentIconCache() async {
+    final tempDir = Directory.systemTemp;
+    final pngFiles = tempDir.listSync().whereType<File>().where(
+      (f) => f.path.endsWith('.png') && f.path.contains('poze_icon_'),
+    );
+    for (final file in pngFiles) {
+      final nameMatch = RegExp(r'poze_icon_(.*)\.png').firstMatch(file.path);
+      if (nameMatch != null) {
+        final appName = nameMatch.group(1)?.replaceAll('_', ' ');
+        if (appName != null && !_iconPathCache.containsKey(appName)) {
+          _iconPathCache[appName] = file.path;
+        }
+      }
+    }
+  }
+
+  // Call this on app exit or periodically to clean up old PNG icons
+  Future<void> cleanupOldPngIcons() async {
+    final tempDir = Directory.systemTemp;
+    final pngFiles = tempDir.listSync().whereType<File>().where(
+      (f) => f.path.endsWith('.png') && f.path.contains('poze_icon_'),
+    );
+    for (final file in pngFiles) {
+      try {
+        await file.delete();
+      } catch (_) {}
+    }
+    _iconPathCache.clear();
   }
 }

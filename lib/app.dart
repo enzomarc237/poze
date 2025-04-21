@@ -10,7 +10,7 @@ class AppState extends ChangeNotifier {
   bool _isDarkMode = false;
   bool _autoRefresh = true;
   // Intervalle de rafraîchissement en secondes
-  int _refreshInterval = 5;
+  int _refreshInterval = 50;
 
   // Constantes pour la validation
   static const int minRefreshInterval = 1; // Minimum 1 seconde
@@ -28,7 +28,7 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _isDarkMode = prefs.getBool('isDarkMode') ?? false;
     _autoRefresh = prefs.getBool('autoRefresh') ?? true;
-    _refreshInterval = prefs.getInt('refreshInterval') ?? 5;
+    _refreshInterval = prefs.getInt('refreshInterval') ?? 50;
     notifyListeners();
   }
 
@@ -111,33 +111,33 @@ class _PozeMacosWindowState extends State<PozeMacosWindow> {
   @override
   Widget build(BuildContext context) {
     return MacosWindow(
-      sidebar: Sidebar(
-        minWidth: 64,
-        maxWidth: 64,
-        isResizable: false,
-        builder: (context, scrollController) {
-          return SidebarItems(
-            currentIndex: _selectedViewIndex,
-            onChanged: (index) {
-              setState(() {
-                _selectedViewIndex = index;
-              });
-            },
-            items: [
-              SidebarItem(
-                leading: MacosIcon(Icons.home),
-                label: const SizedBox.shrink(),
-              ),
-              SidebarItem(
-                leading: MacosIcon(Icons.settings),
-                label: const SizedBox.shrink(),
-              ),
-            ],
-          );
-        },
-        // Remove bottom controls for minimalism
-        bottom: null,
-      ),
+      // sidebar: Sidebar(
+      //   minWidth: 64,
+      //   maxWidth: 64,
+      //   isResizable: false,
+      //   builder: (context, scrollController) {
+      //     return SidebarItems(
+      //       currentIndex: _selectedViewIndex,
+      //       onChanged: (index) {
+      //         setState(() {
+      //           _selectedViewIndex = index;
+      //         });
+      //       },
+      //       items: [
+      //         SidebarItem(
+      //           leading: MacosIcon(Icons.home),
+      //           label: const SizedBox.shrink(),
+      //         ),
+      //         SidebarItem(
+      //           leading: MacosIcon(Icons.settings),
+      //           label: const SizedBox.shrink(),
+      //         ),
+      //       ],
+      //     );
+      //   },
+      //   // Remove bottom controls for minimalism
+      //   bottom: null,
+      // ),
       child: IndexedStack(
         index: _selectedViewIndex,
         children: const [HomeView(), SettingsView()],

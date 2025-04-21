@@ -88,27 +88,40 @@ class ProcessListItem extends StatelessWidget {
 
   Widget _buildLeadingIcon() {
     if (process.iconPath != null && process.iconPath!.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.file(
-          File(process.iconPath!),
-          width: 36,
-          height: 36,
-          fit: BoxFit.cover,
-          errorBuilder:
-              (context, error, stackTrace) =>
-                  const Icon(Icons.apps, color: Colors.white, size: 20),
+      print('Process iconPath: ' + process.iconPath!);
+      return GestureDetector(
+        onTap: () {
+          print(process.toString());
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.file(
+            File(process.iconPath!),
+            width: 36,
+            height: 36,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              print('Image.file error for: ' + process.iconPath!);
+              return const Icon(Icons.apps, color: Colors.white, size: 20);
+            },
+          ),
         ),
       );
     }
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: _getProcessColor(),
-        borderRadius: BorderRadius.circular(8),
+    // No iconPath or it's empty/null
+    return GestureDetector(
+      onTap: () {
+        print(process.toString());
+      },
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: _getProcessColor(),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(Icons.apps, color: Colors.white, size: 20),
       ),
-      child: const Icon(Icons.apps, color: Colors.white, size: 20),
     );
   }
 

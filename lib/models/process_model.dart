@@ -59,7 +59,7 @@ class ProcessModel {
 
   @override
   String toString() {
-    return 'ProcessModel(pid: $pid, name: $name, cpuUsage: $cpuUsage, isPaused: $isPaused)';
+    return 'ProcessModel(pid: $pid, name: $name, cpuUsage: $cpuUsage, isPaused: $isPaused, iconPath: $iconPath)';
   }
 
   ProcessModel copyWith({
