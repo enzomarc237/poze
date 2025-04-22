@@ -36,6 +36,64 @@ class _HomeViewState extends State<HomeView> {
   StreamSubscription? _errorSubscription;
   SortBy _sortBy = SortBy.cpuUsage;
 
+  // Batch selection state
+  final Set<String> _selectedPids = {};
+
+  void _toggleSelectProcess(String pid) {
+    setState(() {
+      if (_selectedPids.contains(pid)) {
+        _selectedPids.remove(pid);
+      } else {
+        _selectedPids.add(pid);
+      }
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedPids.clear();
+    });
+  }
+
+  bool get _hasSelection => _selectedPids.isNotEmpty;
+
+  List<ProcessModel> get _selectedProcesses =>
+      _processes.where((p) => _selectedPids.contains(p.pid)).toList();
+
+  Future<void> _batchPause() async {
+    final names = _selectedProcesses.map((p) => p.name).toList();
+    await _processService.pauseProcesses(names);
+    _clearSelection();
+    _backgroundFetchService.fetchData();
+  }
+
+  Future<void> _batchKill() async {
+    final confirmed = await showMacosAlertDialog(
+      context: context,
+      builder: (_) => MacosAlertDialog(
+        appIcon: const FlutterLogo(),
+        title: const Text('Confirmer la terminaison multiple'),
+        message: Text(
+            'Êtes-vous sûr de vouloir terminer ${_selectedPids.length} processus sélectionnés ? Cette action est irréversible.'),
+        primaryButton: PushButton(
+          controlSize: ControlSize.regular,
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Terminer'),
+        ),
+        secondaryButton: PushButton(
+          controlSize: ControlSize.regular,
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Annuler'),
+        ),
+      ),
+    );
+    if (confirmed == true) {
+      await _processService.killProcesses(_selectedPids.toList());
+      _clearSelection();
+      _backgroundFetchService.fetchData();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -337,6 +395,29 @@ class _HomeViewState extends State<HomeView> {
                             ),
                           ),
                           const SizedBox(width: 16),
+                          if (_hasSelection) ...[
+                            PushButton(
+                              controlSize: ControlSize.small,
+                              color: MacosColors.systemOrangeColor,
+                              onPressed: _batchPause,
+                              child: const Text('Pause sélection'),
+                            ),
+                            const SizedBox(width: 8),
+                            PushButton(
+                              controlSize: ControlSize.small,
+                              color: MacosColors.systemRedColor,
+                              onPressed: _batchKill,
+                              child: const Text('Terminer sélection'),
+                            ),
+                            const SizedBox(width: 8),
+                            PushButton(
+                              controlSize: ControlSize.small,
+                              color: MacosColors.systemGrayColor,
+                              onPressed: _clearSelection,
+                              child: const Text('Annuler sélection'),
+                            ),
+                            const SizedBox(width: 16),
+                          ],
                           Text(
                             appState.autoRefresh
                                 ? 'Auto-actualisation: ${appState.refreshInterval}s'
@@ -441,11 +522,26 @@ class _HomeViewState extends State<HomeView> {
       separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final process = _filteredProcesses[index];
-        return ProcessListItem(
-          process: process,
-          onPause: () => _pauseProcess(process),
-          onResume: () => _resumeProcess(process),
-          onKill: () => _killProcess(process),
+        final selected = _selectedPids.contains(process.pid);
+        return GestureDetector(
+          onTap: () => _toggleSelectProcess(process.pid),
+          child: Container(
+            decoration: selected
+                ? BoxDecoration(
+                    border: Border.all(
+                      color: MacosColors.systemBlueColor,
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  )
+                : null,
+            child: ProcessListItem(
+              process: process,
+              onPause: () => _pauseProcess(process),
+              onResume: () => _resumeProcess(process),
+              onKill: () => _killProcess(process),
+            ),
+          ),
         );
       },
     );

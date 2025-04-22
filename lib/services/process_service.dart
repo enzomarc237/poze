@@ -297,14 +297,32 @@ class ProcessService {
     }
   }
 
+  // Pause multiple processes by name
+  Future<Map<String, bool>> pauseProcesses(List<String> processNames) async {
+    final results = <String, bool>{};
+    for (final name in processNames) {
+      results[name] = await pauseProcess(name);
+    }
+    return results;
+  }
+
+  // Kill multiple processes by PID
+  Future<Map<String, bool>> killProcesses(List<String> pids) async {
+    final results = <String, bool>{};
+    for (final pid in pids) {
+      results[pid] = await killProcess(pid);
+    }
+    return results;
+  }
+
   // Vérifier l'état de pause pour plusieurs processus en une seule commande
   Future<Map<String, bool>> areProcessesPaused(List<String> pids) async {
     if (pids.isEmpty) return {};
-
+  
     try {
       final result = await _shell.run('ps -o pid,state -p ${pids.join(',')}');
       final lines = result.outLines.skip(1); // Skip header
-
+  
       final pauseStates = <String, bool>{};
       for (final line in lines) {
         final parts = line.trim().split(RegExp(r'\s+'));
@@ -314,7 +332,7 @@ class ProcessService {
           pauseStates[pid] = state == 'T';
         }
       }
-
+  
       return pauseStates;
     } catch (e) {
       // print('Erreur lors de la vérification de l\'état des processus: $e');
