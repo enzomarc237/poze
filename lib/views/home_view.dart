@@ -190,6 +190,40 @@ class _HomeViewState extends State<HomeView> {
     }).toList();
   }
 
+  Future<void> _killProcess(ProcessModel process) async {
+    final confirmed = await showMacosAlertDialog(
+      context: context,
+      builder: (_) => MacosAlertDialog(
+        appIcon: const FlutterLogo(),
+        title: const Text('Confirmer la terminaison'),
+        message: Text(
+            'Êtes-vous sûr de vouloir terminer le processus "${process.name}" (PID: ${process.pid}) ? Cette action est irréversible.'),
+        primaryButton: PushButton(
+          controlSize: ControlSize.regular,
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Terminer'),
+        ),
+        secondaryButton: PushButton(
+          controlSize: ControlSize.regular,
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Annuler'),
+        ),
+      ),
+    );
+    if (confirmed == true) {
+      final success = await _processService.killProcess(process.pid);
+      if (success) {
+        setState(() {
+          _processes.removeWhere((p) => p.pid == process.pid);
+        });
+      } else {
+        _showErrorDialog(
+          'Impossible de terminer le processus ${process.name} (PID: ${process.pid})',
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(
@@ -411,6 +445,7 @@ class _HomeViewState extends State<HomeView> {
           process: process,
           onPause: () => _pauseProcess(process),
           onResume: () => _resumeProcess(process),
+          onKill: () => _killProcess(process),
         );
       },
     );

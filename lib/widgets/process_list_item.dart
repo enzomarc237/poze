@@ -10,12 +10,14 @@ class ProcessListItem extends StatelessWidget {
   final ProcessModel process;
   final VoidCallback onPause;
   final VoidCallback onResume;
+  final VoidCallback onKill;
 
   const ProcessListItem({
     super.key,
     required this.process,
     required this.onPause,
     required this.onResume,
+    required this.onKill,
   });
 
   @override
@@ -82,6 +84,8 @@ class ProcessListItem extends StatelessWidget {
           _buildCpuIndicator(context),
           const SizedBox(width: 16),
           _buildActionButton(context),
+          const SizedBox(width: 8),
+          _buildKillButton(context),
         ],
       ),
     );
@@ -201,6 +205,28 @@ class ProcessListItem extends StatelessWidget {
                 size: 14,
                 color: iconColor,
               ), // Use Cupertino icon
+    );
+  }
+
+  Widget _buildKillButton(BuildContext context) {
+    if (_isProtectedProcess) {
+      return const SizedBox.shrink();
+    }
+    final bool isDarkMode =
+        MacosTheme.of(context).brightness == Brightness.dark;
+    final Color killColor = MacosColors.systemRedColor;
+    final Color iconColor = isDarkMode ? MacosColors.black : MacosColors.white;
+
+    return PushButton(
+      controlSize: ControlSize.small,
+      onPressed: onKill,
+      color: killColor,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: Icon(
+        CupertinoIcons.delete_solid,
+        size: 14,
+        color: iconColor,
+      ),
     );
   }
 

@@ -102,7 +102,7 @@ dependencies:
 
 ## Planned Enhancements & Features
 ### Process Management
-- [ ] Terminate (kill) processes with confirmation
+- [x] Terminate (kill) processes with confirmation
 - [ ] Batch actions (pause/kill multiple)
 - [ ] Detailed process info (memory, threads, open files)
 - [ ] Search/filter/sort processes

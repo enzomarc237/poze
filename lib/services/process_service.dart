@@ -352,6 +352,16 @@ class ProcessService {
     }
     iconPathCache.clear();
   }
+  // Terminate (kill) a process by PID
+  Future<bool> killProcess(String pid) async {
+    try {
+      final results = await _shell.run('kill -9 $pid');
+      return results.every((result) => result.exitCode == 0);
+    } catch (e) {
+      // print('Erreur lors de la terminaison du processus: $e');
+      return false;
+    }
+  }
 }
 
 enum SortBy { cpuUsage, name, pid }
