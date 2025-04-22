@@ -127,7 +127,7 @@ dependencies:
 
 ### Settings & Customization
 - [x] Theme selection (light/dark/system)
-- [ ] Start at login (macOS, via `launch_at_login`)
+- [~] Start at login (macOS, via `launch_at_login`)
 - [ ] Custom auto-refresh intervals
 - [ ] Show/hide system processes
 - [ ] Confirm before pausing/killing processes

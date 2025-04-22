@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:provider/provider.dart';
+import 'package:launch_at_login/launch_at_login.dart';
 import '../app.dart';
 
 class SettingsView extends StatefulWidget {
@@ -14,6 +15,8 @@ class SettingsView extends StatefulWidget {
 class _SettingsViewState extends State<SettingsView> {
   late TextEditingController _refreshIntervalController;
   late MacosTabController _themeTabController;
+  bool _startAtLogin = false;
+  bool _startAtLoginLoading = true;
 
   @override
   void initState() {
@@ -23,7 +26,22 @@ class _SettingsViewState extends State<SettingsView> {
       initialIndex: 0,
       length: 3,
     );
-    // The initial index will be set in didChangeDependencies
+    _initStartAtLogin();
+  }
+
+  Future<void> _initStartAtLogin() async {
+    try {
+      final enabled = await LaunchAtLogin.isEnabled();
+      setState(() {
+        _startAtLogin = enabled;
+        _startAtLoginLoading = false;
+      });
+    } catch (_) {
+      setState(() {
+        _startAtLogin = false;
+        _startAtLoginLoading = false;
+      });
+    }
   }
 
   @override
@@ -139,6 +157,31 @@ class _SettingsViewState extends State<SettingsView> {
                             ),
                           ],
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+                    Row(
+                      children: [
+                        const Text('Démarrer au login'),
+                        const Spacer(),
+                        _startAtLoginLoading
+                            ? const CupertinoActivityIndicator()
+                            : MacosSwitch(
+                                value: _startAtLogin,
+                                onChanged: (value) async {
+                                  setState(() {
+                                    _startAtLogin = value;
+                                    _startAtLoginLoading = true;
+                                  });
+                                  try {
+                                    await LaunchAtLogin.setEnabled(value);
+                                  } finally {
+                                    setState(() {
+                                      _startAtLoginLoading = false;
+                                    });
+                                  }
+                                },
+                              ),
                       ],
                     ),
                     const SizedBox(height: 30),
