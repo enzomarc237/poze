@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:provider/provider.dart';
-import 'package:launch_at_login/launch_at_login.dart';
+import 'package:launch_at_startup/launch_at_startup.dart';
 import '../app.dart';
 
 class SettingsView extends StatefulWidget {
@@ -31,7 +31,7 @@ class _SettingsViewState extends State<SettingsView> {
 
   Future<void> _initStartAtLogin() async {
     try {
-      final enabled = await LaunchAtLogin.isEnabled();
+      final enabled = await launchAtStartup.isEnabled();
       setState(() {
         _startAtLogin = enabled;
         _startAtLoginLoading = false;
@@ -174,7 +174,11 @@ class _SettingsViewState extends State<SettingsView> {
                                     _startAtLoginLoading = true;
                                   });
                                   try {
-                                    await LaunchAtLogin.setEnabled(value);
+                                    if (value) {
+                                      await launchAtStartup.enable();
+                                    } else {
+                                      await launchAtStartup.disable();
+                                    }
                                   } finally {
                                     setState(() {
                                       _startAtLoginLoading = false;

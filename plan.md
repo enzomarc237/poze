@@ -54,7 +54,7 @@ dependencies:
   provider: ^6.1.1            # State management
   shared_preferences: ^2.5.3  # Settings persistence
   tray_manager: ^0.2.2        # System tray integration
-  launch_at_login: ^0.2.0     # Start at login (macOS)
+  launch_at_startup: ^0.5.1   # Start at login (macOS)
   # charts_flutter: ^0.12.0   # (optional, for advanced charts)
 ```
 
@@ -127,7 +127,7 @@ dependencies:
 
 ### Settings & Customization
 - [x] Theme selection (light/dark/system)
-- [~] Start at login (macOS, via `launch_at_login`)
+- [x] Start at login (macOS, via `launch_at_startup`)
 - [ ] Custom auto-refresh intervals
 - [ ] Show/hide system processes
 - [ ] Confirm before pausing/killing processes
@@ -173,3 +173,4 @@ dependencies:
 ---
 
 _Last updated: 2025-04-22_
+

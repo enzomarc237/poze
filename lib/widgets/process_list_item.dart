@@ -146,7 +146,33 @@ class ProcessListItem extends StatelessWidget {
     );
   }
 
+  bool get _isProtectedProcess {
+    final protectedNames = [
+      'Finder',
+      'Activity Monitor',
+      'WindowServer',
+      'loginwindow',
+      'SystemUIServer',
+      'Dock',
+      'launchd',
+      'coreaudiod',
+      'UserEventAgent',
+      'ControlCenter',
+      'NotificationCenter',
+      'Spotlight',
+      'poze', // Your own app, adjust if needed
+    ];
+    final lowerName = process.name.toLowerCase();
+    // Also protect current app by checking executable name
+    final selfName = Platform.resolvedExecutable.split('/').last.toLowerCase();
+    return protectedNames.any((n) => lowerName == n.toLowerCase()) ||
+        lowerName == selfName;
+  }
+
   Widget _buildActionButton(BuildContext context) {
+    if (_isProtectedProcess) {
+      return const SizedBox.shrink(); // Hide button for protected processes
+    }
     final bool isDarkMode =
         MacosTheme.of(context).brightness == Brightness.dark;
     final Color playColor = MacosColors.systemGreenColor;
