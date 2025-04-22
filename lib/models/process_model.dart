@@ -10,6 +10,9 @@ class ProcessModel {
   final double cpuUsage;
   final bool isPaused;
   final String? iconPath; // Path to the app icon (optional, can be null)
+  final int? memoryKb;
+  final int? threads;
+  final List<String>? openFiles;
 
   ProcessModel({
     required this.pid,
@@ -18,6 +21,9 @@ class ProcessModel {
     required this.cpuUsage,
     this.isPaused = false,
     this.iconPath,
+    this.memoryKb,
+    this.threads,
+    this.openFiles,
   });
 
   // Cette méthode n'est plus utilisée car nous n'utilisons plus ps aux
@@ -70,6 +76,9 @@ class ProcessModel {
     double? cpuUsage,
     bool? isPaused,
     String? iconPath,
+    int? memoryKb,
+    int? threads,
+    List<String>? openFiles,
   }) {
     return ProcessModel(
       pid: pid ?? this.pid,
@@ -78,6 +87,9 @@ class ProcessModel {
       cpuUsage: cpuUsage ?? this.cpuUsage,
       isPaused: isPaused ?? this.isPaused,
       iconPath: iconPath ?? this.iconPath,
+      memoryKb: memoryKb ?? this.memoryKb,
+      threads: threads ?? this.threads,
+      openFiles: openFiles ?? this.openFiles,
     );
   }
 }

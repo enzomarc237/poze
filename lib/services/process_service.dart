@@ -380,6 +380,47 @@ class ProcessService {
       return false;
     }
   }
+
+ // Get detailed info for a process: memory, threads, open files
+ Future<ProcessModel?> getProcessDetails(ProcessModel process) async {
+   try {
+     // Get memory and thread count
+     final psResult = await _shell.run(
+       'ps -p ${process.pid} -o rss=,nlwp=',
+     );
+     int? memoryKb;
+     int? threads;
+     if (psResult.isNotEmpty && psResult.first.exitCode == 0) {
+       final parts = psResult.first.outText.trim().split(RegExp(r'\s+'));
+       if (parts.length >= 2) {
+         memoryKb = int.tryParse(parts[0]);
+         threads = int.tryParse(parts[1]);
+       }
+     }
+
+     // Get open files (may require permissions)
+     List<String>? openFiles;
+     try {
+       final lsofResult = await _shell.run('lsof -p ${process.pid} -Fn');
+       if (lsofResult.isNotEmpty && lsofResult.first.exitCode == 0) {
+         openFiles = lsofResult.first.outLines
+             .where((line) => line.startsWith('n'))
+             .map((line) => line.substring(1))
+             .toList();
+       }
+     } catch (_) {
+       openFiles = null;
+     }
+
+     return process.copyWith(
+       memoryKb: memoryKb,
+       threads: threads,
+       openFiles: openFiles,
+     );
+   } catch (e) {
+     return null;
+   }
+ }
 }
 
 enum SortBy { cpuUsage, name, pid }

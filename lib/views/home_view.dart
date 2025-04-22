@@ -540,10 +540,75 @@ class _HomeViewState extends State<HomeView> {
               onPause: () => _pauseProcess(process),
               onResume: () => _resumeProcess(process),
               onKill: () => _killProcess(process),
+              onInfo: () => _showProcessInfo(process),
             ),
           ),
         );
       },
+    );
+  }
+  Future<void> _showProcessInfo(ProcessModel process) async {
+    showMacosAlertDialog(
+      context: context,
+      builder: (_) => MacosAlertDialog(
+        appIcon: const FlutterLogo(),
+        title: Text('Chargement...'),
+        message: const Text('Récupération des informations détaillées...'),
+        primaryButton: PushButton(
+          controlSize: ControlSize.regular,
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Fermer'),
+        ),
+      ),
+    );
+    final details = await _processService.getProcessDetails(process);
+    Navigator.of(context).pop(); // Close loading dialog
+
+    if (details == null) {
+      _showErrorDialog('Impossible de récupérer les informations du processus.');
+      return;
+    }
+
+    showMacosAlertDialog(
+      context: context,
+      builder: (_) => MacosAlertDialog(
+        appIcon: const FlutterLogo(),
+        title: Text('Détails pour ${details.name} (PID: ${details.pid})'),
+        message: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Mémoire: ${details.memoryKb != null ? '${(details.memoryKb! / 1024).toStringAsFixed(1)} MB' : 'N/A'}'),
+            Text('Threads: ${details.threads ?? 'N/A'}'),
+            const SizedBox(height: 8),
+            Text('Fichiers ouverts:'),
+            if (details.openFiles != null && details.openFiles!.isNotEmpty)
+              SizedBox(
+                height: 120,
+                width: 400,
+                child: Scrollbar(
+                  child: ListView(
+                    children: details.openFiles!
+                        .take(50)
+                        .map((f) => Text(
+                              f,
+                              style: const TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ))
+                        .toList(),
+                  ),
+                ),
+              )
+            else
+              const Text('Aucun ou accès refusé.'),
+          ],
+        ),
+        primaryButton: PushButton(
+          controlSize: ControlSize.regular,
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Fermer'),
+        ),
+      ),
     );
   }
 }

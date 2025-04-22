@@ -104,7 +104,7 @@ dependencies:
 ### Process Management
 - [x] Terminate (kill) processes with confirmation
 - [x] Batch actions (pause/kill multiple)
-- [ ] Detailed process info (memory, threads, open files)
+- [x] Detailed process info (memory, threads, open files)
 - [ ] Search/filter/sort processes
 
 ### System Monitoring
