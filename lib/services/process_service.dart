@@ -1,14 +1,14 @@
+import '../models/process_model.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:process_run/process_run.dart';
-import '../models/process_model.dart';
 
 class ProcessService {
   // Ensure commands run within a shell environment
   final _shell = Shell(runInShell: true);
 
   // Cache for app icons to avoid repeated AppleScript calls
-  final Map<String, String?> _iconPathCache = {};
+  static Map<String, String?> iconPathCache = {};
 
   // Récupérer uniquement les applications GUI lancées par l'utilisateur
   Future<List<ProcessModel>> getRunningProcesses() async {
@@ -67,13 +67,11 @@ class ProcessService {
   }
 
   // Get the icon path for a given application name using AppleScript, with caching and PNG conversion
-  Future<String?> _getAppIconPath(String appName) async {
-    if (_iconPathCache.containsKey(appName)) {
-      print("Cached icon for $appName: \\${_iconPathCache[appName]}");
-      return _iconPathCache[appName];
+  static Future<String?> getAppIconPath(String appName) async {
+    if (iconPathCache.containsKey(appName)) {
+      return iconPathCache[appName];
     }
     try {
-      // Get the bundle path of the app
       final script = '''
         tell application "System Events"
           set appProc to first process whose name is "${appName.replaceAll('"', '\\"')}"
@@ -81,40 +79,38 @@ class ProcessService {
         end tell
         return appPath
       ''';
-      // Write to a temp file to avoid AppleScript escaping issues
       final tempDir = Directory.systemTemp;
       final tempScriptFile = File(
         '${tempDir.path}/poze_icon_script_${DateTime.now().millisecondsSinceEpoch}.applescript',
       );
       await tempScriptFile.writeAsString(script);
-      final results = await _shell.run('osascript "${tempScriptFile.path}"');
+      final results = await Shell(
+        runInShell: true,
+      ).run('osascript "${tempScriptFile.path}"');
       await tempScriptFile.delete();
       if (results.isEmpty || results.first.exitCode != 0) {
-        _iconPathCache[appName] = null;
+        iconPathCache[appName] = null;
         return null;
       }
       final appPath = results.first.outText.trim();
       if (appPath.isEmpty) {
-        _iconPathCache[appName] = null;
+        iconPathCache[appName] = null;
         return null;
       }
-      // Try to find the icon file
       final iconPath = '$appPath/Contents/Resources/AppIcon.icns';
       String? icnsPath;
       if (await File(iconPath).exists()) {
         icnsPath = iconPath;
       } else {
-        // Fallback: try generic app icon
         final genericIcon = '$appPath/Contents/Resources/${appName}.icns';
         if (await File(genericIcon).exists()) {
           icnsPath = genericIcon;
         }
       }
       if (icnsPath == null) {
-        _iconPathCache[appName] = null;
+        iconPathCache[appName] = null;
         return null;
       }
-      // Convert .icns to .png using sips (macOS built-in)
       final pngPath =
           '${tempDir.path}/poze_icon_${appName.replaceAll(' ', '_')}.png';
       final sipsResult = await Process.run('sips', [
@@ -126,18 +122,14 @@ class ProcessService {
         pngPath,
       ]);
       if (sipsResult.exitCode == 0 && await File(pngPath).exists()) {
-        _iconPathCache[appName] = pngPath;
+        iconPathCache[appName] = pngPath;
         return pngPath;
       } else {
-        // If conversion fails, fallback to .icns (will not display in Flutter)
-        _iconPathCache[appName] = icnsPath;
+        iconPathCache[appName] = icnsPath;
         return icnsPath;
       }
     } catch (e) {
-      print(
-        'Erreur lors de la récupération de l\'icône de l\'application: $e',
-      ); // Only keep this print for appIcon
-      _iconPathCache[appName] = null;
+      iconPathCache[appName] = null;
       return null;
     }
   }
@@ -259,7 +251,8 @@ class ProcessService {
         final name = nameByPid[pid] ?? 'Unknown';
         final cpuUsage = pidToCpu[pid] ?? 0.0;
         final isPaused = pidToState[pid] == 'T';
-        final iconPath = await _getAppIconPath(name);
+        // final iconPath = await _getAppIconPath(name);
+
         processes.add(
           ProcessModel(
             pid: pid,
@@ -267,7 +260,7 @@ class ProcessService {
             command: name,
             cpuUsage: cpuUsage,
             isPaused: isPaused,
-            iconPath: iconPath,
+            // iconPath: iconPath,
           ),
         );
       }
@@ -339,8 +332,8 @@ class ProcessService {
       final nameMatch = RegExp(r'poze_icon_(.*)\.png').firstMatch(file.path);
       if (nameMatch != null) {
         final appName = nameMatch.group(1)?.replaceAll('_', ' ');
-        if (appName != null && !_iconPathCache.containsKey(appName)) {
-          _iconPathCache[appName] = file.path;
+        if (appName != null && !iconPathCache.containsKey(appName)) {
+          iconPathCache[appName] = file.path;
         }
       }
     }
@@ -357,12 +350,8 @@ class ProcessService {
         await file.delete();
       } catch (_) {}
     }
-    _iconPathCache.clear();
+    iconPathCache.clear();
   }
 }
 
-enum SortBy {
-  cpuUsage,
-  name,
-  pid,
-}
+enum SortBy { cpuUsage, name, pid }

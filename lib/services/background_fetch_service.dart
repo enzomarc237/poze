@@ -7,12 +7,7 @@ import 'process_service.dart';
 import 'system_service.dart';
 
 /// Message types for communication between isolate and main thread
-enum MessageType {
-  fetchData,
-  processData,
-  systemData,
-  error,
-}
+enum MessageType { fetchData, processData, systemData, error }
 
 /// Message structure for isolate communication
 class IsolateMessage {
@@ -22,17 +17,11 @@ class IsolateMessage {
   IsolateMessage(this.type, this.data);
 
   Map<String, dynamic> toMap() {
-    return {
-      'type': type.index,
-      'data': data,
-    };
+    return {'type': type.index, 'data': data};
   }
 
   static IsolateMessage fromMap(Map<String, dynamic> map) {
-    return IsolateMessage(
-      MessageType.values[map['type']],
-      map['data'],
-    );
+    return IsolateMessage(MessageType.values[map['type']], map['data']);
   }
 }
 
@@ -41,13 +30,15 @@ class BackgroundFetchService {
   Isolate? _isolate;
   ReceivePort? _receivePort;
   SendPort? _sendPort;
-  final _processDataController = StreamController<List<ProcessModel>>.broadcast();
+  final _processDataController =
+      StreamController<List<ProcessModel>>.broadcast();
   final _systemDataController = StreamController<SystemStats>.broadcast();
   final _errorController = StreamController<String>.broadcast();
   bool _isInitialized = false;
 
   /// Stream of process data updates
-  Stream<List<ProcessModel>> get processDataStream => _processDataController.stream;
+  Stream<List<ProcessModel>> get processDataStream =>
+      _processDataController.stream;
 
   /// Stream of system stats updates
   Stream<SystemStats> get systemDataStream => _systemDataController.stream;
@@ -60,10 +51,7 @@ class BackgroundFetchService {
     if (_isInitialized) return;
 
     _receivePort = ReceivePort();
-    _isolate = await Isolate.spawn(
-      _isolateEntryPoint,
-      _receivePort!.sendPort,
-    );
+    _isolate = await Isolate.spawn(_isolateEntryPoint, _receivePort!.sendPort);
 
     _receivePort!.listen((message) {
       if (message is SendPort) {
@@ -80,15 +68,17 @@ class BackgroundFetchService {
     switch (message.type) {
       case MessageType.processData:
         final List<dynamic> rawProcesses = message.data;
-        final processes = rawProcesses.map((p) {
-          return ProcessModel(
-            pid: p['pid'],
-            name: p['name'],
-            command: p['command'],
-            cpuUsage: p['cpuUsage'],
-            isPaused: p['isPaused'] ?? false,
-          );
-        }).toList();
+        final processes =
+            rawProcesses.map((p) {
+              return ProcessModel(
+                pid: p['pid'],
+                name: p['name'],
+                command: p['command'],
+                cpuUsage: p['cpuUsage'],
+                isPaused: p['isPaused'] ?? false,
+                iconPath: p['iconPath'],
+              );
+            }).toList();
         _processDataController.add(processes);
         break;
       case MessageType.systemData:
@@ -136,40 +126,39 @@ class BackgroundFetchService {
     receivePort.listen((message) async {
       if (message is Map<String, dynamic>) {
         final isolateMessage = IsolateMessage.fromMap(message);
-        
+
         if (isolateMessage.type == MessageType.fetchData) {
           try {
             // Fetch process data
             final processes = await processService.getProcessesWithCpuUsage();
-            final processList = processes.map((p) => {
-              'pid': p.pid,
-              'name': p.name,
-              'command': p.command,
-              'cpuUsage': p.cpuUsage,
-              'isPaused': p.isPaused,
-            }).toList();
-            
-            mainSendPort.send(IsolateMessage(
-              MessageType.processData,
-              processList,
-            ).toMap());
+            final processList =
+                processes.map((p) => {
+                    'pid': p.pid,
+                    'name': p.name,
+                    'command': p.command,
+                    'cpuUsage': p.cpuUsage,
+                    'isPaused': p.isPaused,
+                    'iconPath': p.iconPath,
+                  }).toList();
+
+            mainSendPort.send(
+              IsolateMessage(MessageType.processData, processList).toMap(),
+            );
 
             // Fetch system stats
             final systemStats = await systemService.getSystemStats();
-            mainSendPort.send(IsolateMessage(
-              MessageType.systemData,
-              {
+            mainSendPort.send(
+              IsolateMessage(MessageType.systemData, {
                 'systemVersion': systemStats.systemVersion,
                 'totalProcesses': systemStats.totalProcesses,
                 'totalCpuUsage': systemStats.totalCpuUsage,
                 'timestamp': systemStats.timestamp.millisecondsSinceEpoch,
-              },
-            ).toMap());
+              }).toMap(),
+            );
           } catch (e) {
-            mainSendPort.send(IsolateMessage(
-              MessageType.error,
-              e.toString(),
-            ).toMap());
+            mainSendPort.send(
+              IsolateMessage(MessageType.error, e.toString()).toMap(),
+            );
           }
         }
       }

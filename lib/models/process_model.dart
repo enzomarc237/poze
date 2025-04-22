@@ -1,10 +1,15 @@
+import 'dart:io';
+
+import 'package:poze/services/process_service.dart';
+import 'package:process_run/shell.dart';
+
 class ProcessModel {
   final String pid;
   final String name;
   final String command;
   final double cpuUsage;
   final bool isPaused;
-  final String? iconPath; // Path to the app icon
+  final String? iconPath; // Path to the app icon (optional, can be null)
 
   ProcessModel({
     required this.pid,
@@ -22,27 +27,23 @@ class ProcessModel {
     if (parts.length < 11) {
       throw Exception('Format de sortie ps invalide: $line');
     }
-
     final pid = parts[1];
     final cpu = double.tryParse(parts[2]) ?? 0.0;
-
-    // Le nom de la commande est généralement le dernier élément
     final commandFull = parts.sublist(10).join(' ');
     final commandParts = commandFull.split('/');
     final name =
         commandParts.isNotEmpty
             ? commandParts.last.split(' ').first
             : commandFull;
-
     return ProcessModel(
       pid: pid,
       name: name,
       command: commandFull,
       cpuUsage: cpu,
+      iconPath: null,
     );
   }
 
-  // Nouvelle factory pour créer une instance à partir des données AppleScript
   factory ProcessModel.fromAppleScript({
     required String pid,
     required String name,
@@ -51,9 +52,9 @@ class ProcessModel {
     return ProcessModel(
       pid: pid,
       name: name,
-      command: name, // Pour les applications GUI, on utilise simplement le nom
+      command: name,
       cpuUsage: cpuUsage,
-      iconPath: null, // Initially set to null, will be fetched later
+      iconPath: null,
     );
   }
 
