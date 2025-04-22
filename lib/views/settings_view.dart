@@ -13,28 +13,44 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView> {
   late TextEditingController _refreshIntervalController;
+  late MacosTabController _themeTabController;
 
   @override
   void initState() {
     super.initState();
-    // On initialise le contrôleur avec la valeur actuelle
     _refreshIntervalController = TextEditingController();
-
-    // La valeur sera définie dans didChangeDependencies
+    _themeTabController = MacosTabController(
+      initialIndex: 0,
+      length: 3,
+    );
+    // The initial index will be set in didChangeDependencies
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Mise à jour du contrôleur avec la valeur actuelle de AppState
-    final refreshInterval =
-        Provider.of<AppState>(context, listen: false).refreshInterval;
+    final appState = Provider.of<AppState>(context, listen: false);
+    final refreshInterval = appState.refreshInterval;
     _refreshIntervalController.text = refreshInterval.toString();
+
+    // Set the theme tab controller index based on appState.themeMode
+    switch (appState.themeMode) {
+      case ThemeMode.system:
+        _themeTabController.index = 0;
+        break;
+      case ThemeMode.light:
+        _themeTabController.index = 1;
+        break;
+      case ThemeMode.dark:
+        _themeTabController.index = 2;
+        break;
+    }
   }
 
   @override
   void dispose() {
     _refreshIntervalController.dispose();
+    _themeTabController.dispose();
     super.dispose();
   }
 
@@ -89,6 +105,43 @@ class _SettingsViewState extends State<SettingsView> {
                 return ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
+                    const Text(
+                      'Apparence',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Text('Thème'),
+                        const Spacer(),
+                        MacosPopupButton<ThemeMode>(
+                          value: appState.themeMode,
+                          onChanged: (ThemeMode? mode) {
+                            if (mode != null) {
+                              appState.setThemeMode(mode);
+                            }
+                          },
+                          items: const [
+                            MacosPopupMenuItem(
+                              value: ThemeMode.system,
+                              child: Text('Système'),
+                            ),
+                            MacosPopupMenuItem(
+                              value: ThemeMode.light,
+                              child: Text('Clair'),
+                            ),
+                            MacosPopupMenuItem(
+                              value: ThemeMode.dark,
+                              child: Text('Sombre'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
                     const Text(
                       'Actualisation',
                       style: TextStyle(

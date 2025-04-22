@@ -7,7 +7,7 @@ import 'views/home_view.dart';
 import 'views/settings_view.dart';
 
 class AppState extends ChangeNotifier {
-  bool _isDarkMode = false;
+  ThemeMode _themeMode = ThemeMode.system;
   bool _autoRefresh = true;
   // Intervalle de rafraîchissement en secondes
   int _refreshInterval = 50;
@@ -16,7 +16,7 @@ class AppState extends ChangeNotifier {
   static const int minRefreshInterval = 1; // Minimum 1 seconde
   static const int maxRefreshInterval = 3600; // Maximum 1 heure (3600 secondes)
 
-  bool get isDarkMode => _isDarkMode;
+  ThemeMode get themeMode => _themeMode;
   bool get autoRefresh => _autoRefresh;
   int get refreshInterval => _refreshInterval;
 
@@ -26,7 +26,17 @@ class AppState extends ChangeNotifier {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    final themeString = prefs.getString('themeMode') ?? 'system';
+    switch (themeString) {
+      case 'light':
+        _themeMode = ThemeMode.light;
+        break;
+      case 'dark':
+        _themeMode = ThemeMode.dark;
+        break;
+      default:
+        _themeMode = ThemeMode.system;
+    }
     _autoRefresh = prefs.getBool('autoRefresh') ?? true;
     _refreshInterval = prefs.getInt('refreshInterval') ?? 50;
     notifyListeners();
@@ -34,13 +44,24 @@ class AppState extends ChangeNotifier {
 
   Future<void> saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkMode', _isDarkMode);
+    String themeString;
+    switch (_themeMode) {
+      case ThemeMode.light:
+        themeString = 'light';
+        break;
+      case ThemeMode.dark:
+        themeString = 'dark';
+        break;
+      default:
+        themeString = 'system';
+    }
+    await prefs.setString('themeMode', themeString);
     await prefs.setBool('autoRefresh', _autoRefresh);
     await prefs.setInt('refreshInterval', _refreshInterval);
   }
 
-  void toggleDarkMode() {
-    _isDarkMode = !_isDarkMode;
+  void setThemeMode(ThemeMode mode) {
+    _themeMode = mode;
     saveSettings();
     notifyListeners();
   }
@@ -88,7 +109,7 @@ class App extends StatelessWidget {
             title: 'Poze',
             theme: MacosThemeData.light(),
             darkTheme: MacosThemeData.dark(),
-            themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            themeMode: appState.themeMode,
             home: const PozeMacosWindow(),
             debugShowCheckedModeBanner: false,
           );

@@ -1,3 +1,4 @@
+<!-- filepath: /Users/universinformatique/CascadeProjects/poze/plan.md -->
 # Poze App — Unified Development Plan & Roadmap
 
 This document merges the technical plan and feature roadmap for Poze, a modern macOS process manager built with Flutter. Use this as a reference for architecture, implementation, and future enhancements.
@@ -10,14 +11,14 @@ Poze is a Flutter/macOS application for managing system processes. It provides r
 ---
 
 ## Core Features (Current)
-- List all running processes with name, PID, command, and CPU usage
-- Show system info (macOS version, total processes, CPU usage, last update)
-- Pause/resume processes (via `killall -STOP` / `killall -CONT`)
-- Manual and auto-refresh
-- Minimal, icon-only sidebar navigation
-- Modern, native macOS look and feel
-- System tray integration (show/hide, quit)
-- Settings view (dark mode, refresh interval, etc.)
+- [x] List all running processes with name, PID, command, and CPU usage
+- [x] Show system info (macOS version, total processes, CPU usage, last update)
+- [x] Pause/resume processes (via `killall -STOP` / `killall -CONT`)
+- [x] Manual and auto-refresh
+- [x] Minimal, icon-only sidebar navigation
+- [x] Modern, native macOS look and feel
+- [x] System tray integration (show/hide, quit)
+- [x] Settings view (dark mode, refresh interval, etc.)
 
 ---
 
@@ -53,6 +54,7 @@ dependencies:
   provider: ^6.1.1            # State management
   shared_preferences: ^2.5.3  # Settings persistence
   tray_manager: ^0.2.2        # System tray integration
+  launch_at_login: ^0.2.0     # Start at login (macOS)
   # charts_flutter: ^0.12.0   # (optional, for advanced charts)
 ```
 
@@ -61,24 +63,24 @@ dependencies:
 ## Implementation Phases
 
 ### Phase 1: Initial Setup
-- Configure project and dependencies
-- Create base app structure with macos_ui
-- Implement core UI per design
+- [x] Configure project and dependencies
+- [x] Create base app structure with macos_ui
+- [x] Implement core UI per design
 
 ### Phase 2: Core Functionality
-- Service to list running processes (via `ps`/`top`)
-- Data models for processes and system stats
-- UI to display process list and system info
+- [x] Service to list running processes (via `ps`/`top`)
+- [x] Data models for processes and system stats
+- [x] UI to display process list and system info
 
 ### Phase 3: Advanced Features
-- Show CPU usage per process
-- Pause/resume processes (`killall -STOP`/`-CONT`)
-- UI controls for actions
+- [x] Show CPU usage per process
+- [x] Pause/resume processes (`killall -STOP`/`-CONT`)
+- [x] UI controls for actions
 
 ### Phase 4: Polish & Performance
-- UI refinement and animations
-- Performance optimization
-- Bug fixes and testing
+- [~] UI refinement and animations (partially done)
+- [~] Performance optimization (partially done)
+- [~] Bug fixes and testing (ongoing)
 
 ---
 
@@ -91,10 +93,10 @@ dependencies:
 ---
 
 ## User Interface
-- Minimal, icon-only sidebar for navigation
-- Main list: process icon, name, PID, command, CPU usage bar, control buttons
-- Filtering, sorting, and search (planned)
-- Responsive, macOS-native look
+- [x] Minimal, icon-only sidebar for navigation
+- [x] Main list: process icon, name, PID, command, CPU usage bar, control buttons
+- [ ] Filtering, sorting, and search (planned)
+- [x] Responsive, macOS-native look
 
 ---
 
@@ -112,7 +114,7 @@ dependencies:
 - [ ] Quick stats in tray menu
 
 ### UI/UX
-- [ ] List animations, hover/selection
+- [~] List animations, hover/selection (basic animations present)
 - [ ] More themes, accent color selection
 - [ ] Compact/expanded views
 - [ ] Keyboard shortcuts
@@ -124,8 +126,15 @@ dependencies:
 - [ ] Tooltips for sidebar icons
 
 ### Settings & Customization
-- [ ] Configurable columns
+- [x] Theme selection (light/dark/system)
+- [ ] Start at login (macOS, via `launch_at_login`)
 - [ ] Custom auto-refresh intervals
+- [ ] Show/hide system processes
+- [ ] Confirm before pausing/killing processes
+- [ ] Enable/disable notifications
+- [ ] Language/locale selection
+- [ ] Compact/expanded view toggle
+- [ ] Configurable columns
 - [ ] Export process list (CSV, JSON)
 - [ ] Localization
 
@@ -142,10 +151,10 @@ dependencies:
 ---
 
 ## Technical & macOS Considerations
-- Request necessary permissions for system info
-- Ensure compatibility with macOS versions
-- Sandbox compliance
-- All destructive actions require confirmation dialogs
+- [x] Request necessary permissions for system info
+- [x] Ensure compatibility with macOS versions
+- [x] Sandbox compliance
+- [x] All destructive actions require confirmation dialogs
 
 ---
 
@@ -163,4 +172,4 @@ dependencies:
 
 ---
 
-_Last updated: 2025-04-18_
+_Last updated: 2025-04-22_
