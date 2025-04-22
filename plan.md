@@ -105,7 +105,7 @@ dependencies:
 - [x] Terminate (kill) processes with confirmation
 - [x] Batch actions (pause/kill multiple)
 - [x] Detailed process info (memory, threads, open files)
-- [ ] Search/filter/sort processes
+- [x] Search/filter/sort processes
 
 ### System Monitoring
 - [ ] Live CPU/memory/network/disk charts

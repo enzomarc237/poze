@@ -35,6 +35,7 @@ class _HomeViewState extends State<HomeView> {
   StreamSubscription? _systemDataSubscription;
   StreamSubscription? _errorSubscription;
   SortBy _sortBy = SortBy.cpuUsage;
+  String _filterState = 'all'; // 'all', 'running', 'paused'
 
   // Batch selection state
   final Set<String> _selectedPids = {};
@@ -236,16 +237,24 @@ class _HomeViewState extends State<HomeView> {
   }
 
   List<ProcessModel> get _filteredProcesses {
-    if (_searchQuery.isEmpty ||
-        _searchQuery == '' ||
-        _searchQuery.length <= 1) {
-      return _processes;
+    List<ProcessModel> filtered = _processes;
+
+    // Filter by state
+    if (_filterState == 'paused') {
+      filtered = filtered.where((p) => p.isPaused).toList();
+    } else if (_filterState == 'running') {
+      filtered = filtered.where((p) => !p.isPaused).toList();
     }
 
-    return _processes.where((process) {
-      return process.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          process.command.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
+    // Search
+    if (_searchQuery.isNotEmpty && _searchQuery.length > 1) {
+      filtered = filtered.where((process) {
+        return process.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            process.command.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
+
+    return filtered;
   }
 
   Future<void> _killProcess(ProcessModel process) async {
@@ -393,6 +402,28 @@ class _HomeViewState extends State<HomeView> {
                                 }
                               },
                             ),
+                          ),
+                          const SizedBox(width: 16),
+                          MacosPulldownButton(
+                            items: [
+                              MacosPulldownMenuItem(
+                                title: Text("${_filterState == 'all' ? '✓ ' : ''}Tous"),
+                                onTap: () => setState(() => _filterState = 'all'),
+                              ),
+                              MacosPulldownMenuItem(
+                                title: Text("${_filterState == 'running' ? '✓ ' : ''}Actifs"),
+                                onTap: () => setState(() => _filterState = 'running'),
+                              ),
+                              MacosPulldownMenuItem(
+                                title: Text("${_filterState == 'paused' ? '✓ ' : ''}En pause"),
+                                onTap: () => setState(() => _filterState = 'paused'),
+                              ),
+                            ],
+                            title: _filterState == 'all'
+                                ? 'Tous'
+                                : _filterState == 'running'
+                                    ? 'Actifs'
+                                    : 'En pause',
                           ),
                           const SizedBox(width: 16),
                           if (_hasSelection) ...[
