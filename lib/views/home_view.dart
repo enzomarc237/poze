@@ -34,6 +34,7 @@ class _HomeViewState extends State<HomeView> {
   StreamSubscription? _processDataSubscription;
   StreamSubscription? _systemDataSubscription;
   StreamSubscription? _errorSubscription;
+  SortBy _sortBy = SortBy.cpuUsage;
 
   @override
   void initState() {
@@ -177,7 +178,9 @@ class _HomeViewState extends State<HomeView> {
   }
 
   List<ProcessModel> get _filteredProcesses {
-    if (_searchQuery.isEmpty) {
+    if (_searchQuery.isEmpty ||
+        _searchQuery == '' ||
+        _searchQuery.length <= 1) {
       return _processes;
     }
 
@@ -237,9 +240,10 @@ class _HomeViewState extends State<HomeView> {
                 icon: CupertinoIcons.sort_down,
                 items: [
                   MacosPulldownMenuItem(
-                    title: const Text('Par CPU (décroissant)'),
+                    title: Text("${_sortBy == SortBy.cpuUsage ? '✓' : ''} Par CPU (décroissant)"),
                     onTap: () {
                       setState(() {
+                        _sortBy = SortBy.cpuUsage;
                         _processes.sort(
                           (a, b) => b.cpuUsage.compareTo(a.cpuUsage),
                         );
@@ -247,17 +251,19 @@ class _HomeViewState extends State<HomeView> {
                     },
                   ),
                   MacosPulldownMenuItem(
-                    title: const Text('Par nom'),
+                    title:  Text("${_sortBy == SortBy.name ? '✓' : ''} Par Nom"),
                     onTap: () {
                       setState(() {
+                        _sortBy = SortBy.name;
                         _processes.sort((a, b) => a.name.compareTo(b.name));
                       });
                     },
                   ),
                   MacosPulldownMenuItem(
-                    title: const Text('Par PID'),
+                    title: Text("${_sortBy == SortBy.pid ? '✓' : ''} Par PID"),
                     onTap: () {
                       setState(() {
+                        _sortBy = SortBy.pid;
                         _processes.sort((a, b) => a.pid.compareTo(b.pid));
                       });
                     },
@@ -284,9 +290,15 @@ class _HomeViewState extends State<HomeView> {
                             child: MacosSearchField(
                               placeholder: 'Rechercher une application...',
                               onChanged: (value) {
-                                setState(() {
-                                  _searchQuery = value;
-                                });
+                                if (value.isEmpty) {
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                } else {
+                                  setState(() {
+                                    _searchQuery = value;
+                                  });
+                                }
                               },
                             ),
                           ),

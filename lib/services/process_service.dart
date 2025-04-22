@@ -360,3 +360,9 @@ class ProcessService {
     _iconPathCache.clear();
   }
 }
+
+enum SortBy {
+  cpuUsage,
+  name,
+  pid,
+}
