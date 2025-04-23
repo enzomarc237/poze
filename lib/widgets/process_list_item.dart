@@ -12,6 +12,7 @@ class ProcessListItem extends StatelessWidget {
   final VoidCallback onResume;
   final VoidCallback onKill;
   final VoidCallback? onInfo;
+  final bool selected;
 
   const ProcessListItem({
     super.key,
@@ -20,6 +21,7 @@ class ProcessListItem extends StatelessWidget {
     required this.onResume,
     required this.onKill,
     this.onInfo,
+    this.selected = false,
   });
 
   @override
@@ -30,7 +32,10 @@ class ProcessListItem extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 2),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: MacosTheme.of(context).canvasColor.withOpacity(0.95),
+        color:
+            selected
+                ? MacosColors.selectedMenuItemColor.withOpacity(0.7)
+                : MacosTheme.of(context).canvasColor.withOpacity(0.95),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -46,6 +51,8 @@ class ProcessListItem extends StatelessWidget {
       ),
       child: Row(
         children: [
+          _buildSelectionCheckbox(context),
+          const SizedBox(width: 8),
           _buildLeadingIcon(),
           const SizedBox(width: 16),
           Expanded(
@@ -92,6 +99,18 @@ class ProcessListItem extends StatelessWidget {
           _buildInfoButton(context),
         ],
       ),
+    );
+  }
+
+  Widget _buildSelectionCheckbox(BuildContext context) {
+    return Checkbox(
+      value: selected,
+      onChanged: (checked) {
+        // This should be handled by the parent (e.g., HomeView), so this is a placeholder.
+      },
+      activeColor: MacosColors.controlAccentColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
@@ -220,14 +239,31 @@ class ProcessListItem extends StatelessWidget {
 
     return PushButton(
       controlSize: ControlSize.small,
-      onPressed: onInfo,
+      onPressed: () {
+        if (onInfo != null) {
+          onInfo!();
+        } else {
+          showMacosAlertDialog(
+            context: context,
+            builder:
+                (_) => MacosAlertDialog(
+                  appIcon: const FlutterLogo(),
+                  title: const Text('Process Info'),
+                  message: Text(
+                    'Name: ${process.name}\nPID: ${process.pid}\nCPU: ${process.cpuUsage.toStringAsFixed(1)}%\nCommand: ${process.command}',
+                  ),
+                  primaryButton: PushButton(
+                    controlSize: ControlSize.large,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ),
+          );
+        }
+      },
       color: infoColor,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: Icon(
-        CupertinoIcons.info,
-        size: 14,
-        color: iconColor,
-      ),
+      child: Icon(CupertinoIcons.info, size: 14, color: iconColor),
     );
   }
 
@@ -245,11 +281,7 @@ class ProcessListItem extends StatelessWidget {
       onPressed: onKill,
       color: killColor,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: Icon(
-        CupertinoIcons.delete_solid,
-        size: 14,
-        color: iconColor,
-      ),
+      child: Icon(CupertinoIcons.delete_solid, size: 14, color: iconColor),
     );
   }
 
