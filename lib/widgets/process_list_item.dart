@@ -97,9 +97,27 @@ class ProcessListItem extends StatelessWidget {
           ),
           _buildCpuIndicator(context),
           const SizedBox(width: 16),
+          if (!_isProtectedProcess) _buildPauseResumeButton(),
+          const SizedBox(width: 8),
           _buildActionDropdown(context),
         ],
       ),
+    );
+  }
+
+  Widget _buildPauseResumeButton() {
+    return MacosIconButton(
+      icon: Icon(
+        process.isPaused
+            ? CupertinoIcons.play_arrow_solid
+            : CupertinoIcons.pause_solid,
+        color:
+            process.isPaused
+                ? MacosColors.systemGreenColor
+                : MacosColors.systemOrangeColor,
+        size: 16,
+      ),
+      onPressed: process.isPaused ? onResume : onPause,
     );
   }
 
@@ -209,22 +227,6 @@ class ProcessListItem extends StatelessWidget {
     final List<MacosPulldownMenuEntry> menuItems = [
       if (!_isProtectedProcess)
         MacosPulldownMenuItem(
-          title: Row(
-            children: [
-              Icon(
-                process.isPaused
-                    ? CupertinoIcons.play_arrow_solid
-                    : CupertinoIcons.pause_solid,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              Text(process.isPaused ? 'Resume' : 'Pause'),
-            ],
-          ),
-          onTap: process.isPaused ? onResume : onPause,
-        ),
-      if (!_isProtectedProcess)
-        MacosPulldownMenuItem(
           title: const Row(
             children: [
               Icon(CupertinoIcons.delete, size: 16),
@@ -234,7 +236,6 @@ class ProcessListItem extends StatelessWidget {
           ),
           onTap: onKill,
         ),
-      if (!_isProtectedProcess) const MacosPulldownMenuDivider(),
       MacosPulldownMenuItem(
         title: const Row(
           children: [
