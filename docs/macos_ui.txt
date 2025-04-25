@@ -1,0 +1,492 @@
+TITLE: Sidebar Example Usage - Flutter
+DESCRIPTION: This Flutter code snippet demonstrates how to implement a Sidebar widget within a MacosWindow.  It includes setting up a page index, defining the Sidebar's appearance and behavior, and defining SidebarItems for navigation.  The onChanged callback updates the pageIndex, which is then used to control the displayed content.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_0
+
+LANGUAGE: dart
+CODE:
+```
+int pageIndex = 0;
+
+...
+
+MacosWindow(
+  sidebar: Sidebar(
+    minWidth: 200,
+    builder: (context, scrollController) {
+      return SidebarItems(
+        currentIndex: pageIndex,
+        scrollController: scrollController,
+        itemSize: SidebarItemSize.large,
+        onChanged: (i) {
+          setState(() => pageIndex = i);
+        },
+        items: const [
+          SidebarItem(
+            label: Text('Page One'),
+          ),
+          SidebarItem(
+            label: Text('Page Two'),
+          ),
+        ],
+      );
+    },
+  ),
+  endSidebar: Sidebar(
+    startWidth: 200,
+    minWidth: 200,
+    maxWidth: 300,
+    shownByDefault: false,
+    builder: (context, _) {
+      return const Center(
+        child: Text('End Sidebar'),
+      );
+    },
+  ),
+),
+```
+
+----------------------------------------
+
+TITLE: Creating a MacosTextField in Dart
+DESCRIPTION: This code demonstrates how to create a basic `MacosTextField`, which allows the user to enter or edit text. The `placeholder` property displays a hint to the user when the text field is empty.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_10
+
+LANGUAGE: dart
+CODE:
+```
+MacosTextField(
+  placeholder: 'Type some text here',
+)
+```
+
+----------------------------------------
+
+TITLE: Creating a MacosSwitch in Dart
+DESCRIPTION: This snippet shows how to create a `MacosSwitch`, also known as a toggle, which allows the user to switch between two states: on and off. The `value` property represents the current state of the switch, and the `onChanged` callback updates the state when the switch is toggled.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_7
+
+LANGUAGE: dart
+CODE:
+```
+bool switchValue = false;
+
+MacosSwitch(
+  value: switchValue,
+  onChanged: (value) {
+    setState(() => switchValue = value);
+  },
+),
+```
+
+----------------------------------------
+
+TITLE: Creating a PushButton in Dart
+DESCRIPTION: This code demonstrates how to create a basic `PushButton` with a text label and an `onPressed` callback.  The `controlSize` property determines the size of the button. When the button is pressed, the `onPressed` callback is executed.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_6
+
+LANGUAGE: dart
+CODE:
+```
+PushButton(
+  child: Text('button'),
+  controlSize: ControlSize.regular,
+  onPressed: () {
+    print('button pressed');
+  },
+),
+```
+
+----------------------------------------
+
+TITLE: Displaying a MacosAlertDialog in Dart
+DESCRIPTION: This code shows how to display a `MacosAlertDialog`, a modal dialog box that presents information to the user and requires a response. The `showMacosAlertDialog` function is used to display the dialog. The `builder` parameter is a function that returns the `MacosAlertDialog` widget, which includes the app icon, title, message, and primary button.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_8
+
+LANGUAGE: dart
+CODE:
+```
+showMacosAlertDialog(
+  context: context,
+  builder: (_) => MacosAlertDialog(
+    appIcon: FlutterLogo(size: 64),
+    title: Text(
+      'Alert Dialog with Primary Action',
+      style: MacosTheme.of(context).typography.headline,
+    ),
+    message: Text(
+      'This is an alert dialog with a primary action and no secondary action',
+      textAlign: TextAlign.center,
+      style: MacosTypography.of(context).headline,
+    ),
+    primaryButton: PushButton(
+      controlSize: ControlSize.large,
+      child: Text('Primary'),
+      onPressed: () {},
+    ),
+  ),
+);
+```
+
+----------------------------------------
+
+TITLE: Creating a MacosPulldownButton in Dart
+DESCRIPTION: This code snippet demonstrates how to create a basic `MacosPulldownButton` with a title and a list of menu items. Each item in the menu performs an action when tapped. The `MacosPulldownMenuDivider` is used to visually separate menu items. The `onTap` property defines the action to perform when the menu item is selected.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_4
+
+LANGUAGE: dart
+CODE:
+```
+MacosPulldownButton(
+  title: "Actions",
+  // Or provide an icon to use as title:
+  // icon: CupertinoIcons.ellipsis_circle, 
+  items: [
+    MacosPulldownMenuItem(
+      title: const Text('Save'),
+      onTap: () => debugPrint("Saving..."),
+    ),
+    MacosPulldownMenuItem(
+      title: const Text('Save as...'),
+      onTap: () => debugPrint("Opening Save As dialog..."),
+    ),
+    const MacosPulldownMenuDivider(),
+    MacosPulldownMenuItem(
+      enabled: false,
+      title: const Text('Export'),
+      onTap: () => debugPrint("Exporting"),
+    ),
+  ],
+),
+```
+
+----------------------------------------
+
+TITLE: Displaying a MacosSheet in Dart
+DESCRIPTION: This code shows how to display a `MacosSheet`, a modal sheet that slides in from the bottom of the screen. The `showMacosSheet` function is used to display the sheet. The `builder` parameter is a function that returns the `MacosuiSheet` widget.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_9
+
+LANGUAGE: dart
+CODE:
+```
+showMacosSheet(
+  context: context,
+  builder: (_) => const MacosuiSheet(),
+);
+```
+
+----------------------------------------
+
+TITLE: Creating a MacosSearchField in Dart
+DESCRIPTION: This code shows how to create a `MacosSearchField`, which is a specialized text field for performing text-based searches. The `placeholder` property displays a hint to the user, the `results` property provides a list of selectable results, and the `onResultSelected` callback is executed when the user selects a result.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_11
+
+LANGUAGE: dart
+CODE:
+```
+MacosSearchField(
+  placeholder: 'Search for a country...',
+  results: countries.map((e) => SearchResultItem(e)).toList(),
+  onResultSelected: (resultItem) {
+    debugPrint(resultItem.searchKey);
+  },
+)
+```
+
+----------------------------------------
+
+TITLE: Refactoring Theme - Flutter
+DESCRIPTION: This entry indicates a major theme refactor that more closely resembles flutter/material and flutter/cupertino. The `Style` class is now `MacosThemeData`, `MacosTheme` is now a `StatelessWidget`, and `MacosApp` now takes a `theme` and `darkTheme`.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_23
+
+
+
+----------------------------------------
+
+TITLE: Adding MacosPrefix to Widgets - Flutter
+DESCRIPTION: This changelog entry indicates the addition of the `MacosPrefix` to widgets/classes with names that overlap with the material/cupertino libraries, such as `TextField` -> `MacosTextField`, `Scaffold` -> `MacosScaffold`, etc. This change aims to avoid naming conflicts and improve code clarity.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_5
+
+
+
+----------------------------------------
+
+TITLE: Configuring MacosWindowUtils - Flutter
+DESCRIPTION: This Flutter code snippet demonstrates how to initialize and configure macos_window_utils. It sets the toolbar style of the window to `NSWindowToolbarStyle.unified`. This snippet requires the macos_window_utils package. It should be called within the main() function before runApp().
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_1
+
+LANGUAGE: dart
+CODE:
+```
+/// This method initializes macos_window_utils and styles the window.
+Future<void> _configureMacosWindowUtils() async {
+  const config = MacosWindowUtilsConfig(
+    toolbarStyle: NSWindowToolbarStyle.unified,
+  );
+  await config.apply();
+}
+
+void main() async {
+  await _configureMacosWindowUtils();
+
+  runApp(const YourAppHere());
+}
+```
+
+----------------------------------------
+
+TITLE: Setting macOS Deployment Target in Podfile
+DESCRIPTION: This code snippet shows how to set the minimum macOS deployment version in the Podfile for a Flutter project. This is often required to ensure compatibility with native macOS features used by packages like macos_ui or macos_window_utils.  The target version should be at least 10.14.6.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_3
+
+LANGUAGE: podspec
+CODE:
+```
+platform :osx, '10.14.6'
+```
+
+----------------------------------------
+
+TITLE: Configuring MacosWindowUtils with TitleBar - Flutter
+DESCRIPTION: This Flutter code snippet demonstrates how to initialize and configure macos_window_utils when using a TitleBar within a MacosWindow.  It sets the toolbar style of the window to `NSWindowToolbarStyle.expanded` to correctly align the window buttons. This snippet depends on the macos_window_utils package. It needs to be called in the main() function prior to runApp().
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_2
+
+LANGUAGE: dart
+CODE:
+```
+Future<void> _configureMacosWindowUtils() async {
+  const config = MacosWindowUtilsConfig(
+    toolbarStyle: NSWindowToolbarStyle.expanded,
+  );
+  await config.apply();
+}
+```
+
+----------------------------------------
+
+TITLE: Adding BackButton and IconButton Widgets - Flutter
+DESCRIPTION: This entry indicates the addition of the `BackButton` and `IconButton` widgets to the `macos_ui` package, providing common UI elements for navigation and user interaction.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_9
+
+
+
+----------------------------------------
+
+TITLE: Modifying MainFlutterWindow.swift in Swift
+DESCRIPTION: This code snippet shows the changes needed in `MainFlutterWindow.swift` to integrate `macos_window_utils` for older macOS versions.  It imports `macos_window_utils` and replaces the original FlutterViewController initialization with the `MacOSWindowUtilsViewController` initialization. It includes the necessary calls to start the `MainFlutterWindowManipulator` and register plugins with the correct view controller.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_22
+
+LANGUAGE: Swift
+CODE:
+```
+import Cocoa
+import FlutterMacOS
++import macos_window_utils
+
+class MainFlutterWindow: NSWindow {
+  override func awakeFromNib() {
+-   let flutterViewController = FlutterViewController.init()
+-   let windowFrame = self.frame
+-   self.contentViewController = flutterViewController
+-   self.setFrame(windowFrame, display: true)
+
+-   RegisterGeneratedPlugins(registry: flutterViewController)
+    
++   let windowFrame = self.frame
++   let macOSWindowUtilsViewController = MacOSWindowUtilsViewController()
++   self.contentViewController = macOSWindowUtilsViewController
++   self.setFrame(windowFrame, display: true)
+
++   /* Initialize the macos_window_utils plugin */
++   MainFlutterWindowManipulator.start(mainFlutterWindow: self)
+
++   RegisterGeneratedPlugins(registry: macOSWindowUtilsViewController.flutterViewController)
+
+    super.awakeFromNib()
+  }
+}
+```
+
+----------------------------------------
+
+TITLE: Updating Theme API - Flutter
+DESCRIPTION: This entry indicates updates to the theme API, including making properties in `MacosThemeData` and `Typography` non-nullable, renaming `DynamicColorX` to `MacosDynamicColor`, and adding the `lerp` method to theme data classes.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_14
+
+
+
+----------------------------------------
+
+TITLE: Creating an Interactive CapacityIndicator in Dart
+DESCRIPTION: This snippet shows how to create an interactive `CapacityIndicator`. It includes a `value` property and an `onChanged` callback that updates the value when the indicator is interacted with.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_15
+
+LANGUAGE: dart
+CODE:
+```
+double value = 30;
+
+CapacityIndicator(
+  value: value,
+  discrete: false,
+  onChanged: (v) {
+    setState(() => value = v);
+  },
+),
+```
+
+----------------------------------------
+
+TITLE: Creating an Interactive MacosSlider in Dart
+DESCRIPTION: This snippet shows how to create an interactive `MacosSlider`. It includes a `value` property and an `onChanged` callback that updates the value when the slider is interacted with.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_16
+
+LANGUAGE: dart
+CODE:
+```
+double value = 0.5;
+
+MacosSlider(
+  value: value,
+  onChanged: (v) {
+    setState(() => value = v);
+  },
+),
+```
+
+----------------------------------------
+
+TITLE: Creating a MacosTooltip in Dart
+DESCRIPTION: This snippet shows how to create a basic tooltip using the `MacosTooltip` widget. The tooltip displays the specified message when the user hovers over the child widget.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_12
+
+LANGUAGE: dart
+CODE:
+```
+MacosTooltip(
+  message: 'This is a tooltip',
+  child: Text('Hover or long press to show a tooltip'),
+),
+```
+
+----------------------------------------
+
+TITLE: IconButton Updates - Flutter
+DESCRIPTION: This entry describes updates to the `IconButton` widget, including renaming the `color` property to `backgroundColor` and changing the `icon` property to accept a `Widget` instead of `IconData`.  The internal `foregroundColor` value was also deprecated and removed.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_8
+
+
+
+----------------------------------------
+
+TITLE: Implementing Checkbox and RadioButton - Flutter
+DESCRIPTION: This entry signifies the implementation of the `Checkbox` and `RadioButton` widgets in the `macos_ui` package, providing standard UI elements for boolean selection and exclusive option selection.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_20
+
+
+
+----------------------------------------
+
+TITLE: Creating an Interactive RatingIndicator in Dart
+DESCRIPTION: This snippet shows how to create an interactive `RatingIndicator`. It allows users to set a rating, with a given number of symbols (stars), using the `value` and `amount` parameters, and providing an `onChanged` callback to update the `value` when a new rating is selected.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_17
+
+LANGUAGE: dart
+CODE:
+```
+double value = 3;
+
+RatingIndicator(
+  amount: 5,
+  value: value,
+  onChanged: (v) {
+    setState(() => value = v);
+  }
+)
+```
+
+----------------------------------------
+
+TITLE: Adding PushButton Widget - Flutter
+DESCRIPTION: This entry signifies the addition of the `PushButton` widget along with `PushButtonTheme` and `PushButtonThemeData` to the `macos_ui` package. It introduces a button with a distinct push-down visual style.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_22
+
+
+
+----------------------------------------
+
+TITLE: Implementing Scrollbar and MacosScrollBehavior - Flutter
+DESCRIPTION: This entry signifies the implementation of the `Scrollbar` widget and the `MacosScrollBehavior` class in the `macos_ui` package.  These implementations provide macOS-style scrollbars and scrolling behavior.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_11
+
+
+
+----------------------------------------
+
+TITLE: Initializing macos_window_utils in Swift
+DESCRIPTION: This code snippet initializes the `macos_window_utils` plugin in `MainFlutterWindow.swift`. It creates a `MacOSWindowUtilsViewController`, sets it as the content view controller, and initializes the plugin using `MainFlutterWindowManipulator.start`. It also registers generated plugins with the new view controller. This ensures proper window management functionality on older macOS versions.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_21
+
+LANGUAGE: Swift
+CODE:
+```
+let windowFrame = self.frame
+let macOSWindowUtilsViewController = MacOSWindowUtilsViewController()
+self.contentViewController = macOSWindowUtilsViewController
+self.setFrame(windowFrame, display: true)
+
+/* Initialize the macos_window_utils plugin */
+MainFlutterWindowManipulator.start(mainFlutterWindow: self)
+
+RegisterGeneratedPlugins(registry: macOSWindowUtilsViewController.flutterViewController)
+```
+
+----------------------------------------
+
+TITLE: Adding canvasColor to MacosThemeData - Flutter
+DESCRIPTION: This entry indicates the addition of the `canvasColor` property to `MacosThemeData`.  `Scaffold` now uses this as its default background color, allowing for more flexible theme customization.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_6
+
+
+
+----------------------------------------
+
+TITLE: Adding VisualDensity to MacosThemeData - Flutter
+DESCRIPTION: This entry indicates the addition of the `VisualDensity` property to `MacosThemeData`. This allows for control over the compactness of UI elements, similar to Flutter's built-in `VisualDensity`.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_10
+
+
+
+----------------------------------------
+
+TITLE: Creating a MacosPopupButton in Dart
+DESCRIPTION: This snippet shows how to create a `MacosPopupButton` that allows the user to select from a list of mutually exclusive choices. The `value` property determines the currently selected item, and the `onChanged` callback updates the state when a new item is selected. The `items` property contains a list of `MacosPopupMenuItem` widgets, each representing a choice.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/README.md#_snippet_5
+
+LANGUAGE: dart
+CODE:
+```
+String popupValue = 'One';
+
+MacosPopupButton<String>(
+  value: popupValue,
+  onChanged: (String? newValue) {
+    setState(() {
+      popupValue = newValue!;
+    });
+  },
+  items: <String>['One', 'Two', 'Three', 'Four']
+      .map<MacosPopupMenuItem<String>>((String value) {
+    return MacosPopupMenuItem<String>(
+      value: value,
+      child: Text(value),
+    );
+  }).toList(),
+),
+```
+
+----------------------------------------
+
+TITLE: Adding startWidth to ResizablePane and Sidebar - Flutter
+DESCRIPTION: This entry indicates adding `startWidth` properties to `ResizablePane` and `Sidebar` widgets, which enables to set the initial width of these components.
+SOURCE: https://github.com/macosui/macos_ui/blob/dev/CHANGELOG.md#_snippet_12
+

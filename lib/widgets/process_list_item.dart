@@ -1,5 +1,6 @@
 import 'dart:io';
 
+// Remove unused import
 import 'package:flutter/cupertino.dart'; // Import CupertinoIcons
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
@@ -13,6 +14,7 @@ class ProcessListItem extends StatelessWidget {
   final VoidCallback onKill;
   final VoidCallback? onInfo;
   final bool selected;
+  final ValueChanged<bool?>? onSelectedChanged; // Added callback
 
   const ProcessListItem({
     super.key,
@@ -22,6 +24,7 @@ class ProcessListItem extends StatelessWidget {
     required this.onKill,
     this.onInfo,
     this.selected = false,
+    this.onSelectedChanged, // Added to constructor
   });
 
   @override
@@ -34,18 +37,20 @@ class ProcessListItem extends StatelessWidget {
       decoration: BoxDecoration(
         color:
             selected
-                ? MacosColors.selectedMenuItemColor.withOpacity(0.7)
-                : MacosTheme.of(context).canvasColor.withOpacity(0.95),
+                ? MacosTheme.of(context).primaryColor.withValues(
+                  alpha: 0.2,
+                ) // Use theme primary color for selection
+                : MacosTheme.of(context).canvasColor.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: MacosTheme.of(context).dividerColor.withOpacity(0.12),
+          color: MacosTheme.of(context).dividerColor.withValues(alpha: 0.12),
           width: 1,
         ),
       ),
@@ -92,25 +97,19 @@ class ProcessListItem extends StatelessWidget {
           ),
           _buildCpuIndicator(context),
           const SizedBox(width: 16),
-          _buildActionButton(context),
-          const SizedBox(width: 8),
-          _buildKillButton(context),
-          const SizedBox(width: 8),
-          _buildInfoButton(context),
+          _buildActionDropdown(context),
         ],
       ),
     );
   }
 
   Widget _buildSelectionCheckbox(BuildContext context) {
-    return Checkbox(
+    return MacosCheckbox(
       value: selected,
-      onChanged: (checked) {
-        // This should be handled by the parent (e.g., HomeView), so this is a placeholder.
-      },
+      onChanged: onSelectedChanged, // Use the callback
       activeColor: MacosColors.controlAccentColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      // materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
@@ -128,7 +127,16 @@ class ProcessListItem extends StatelessWidget {
               height: 36,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.apps, color: Colors.white, size: 20);
+                // Return a container similar to the fallback on error
+                return Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: _getProcessColor(),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.apps, color: Colors.white, size: 20),
+                );
               },
             ),
           );
@@ -196,92 +204,117 @@ class ProcessListItem extends StatelessWidget {
         lowerName == selfName;
   }
 
-  Widget _buildActionButton(BuildContext context) {
-    if (_isProtectedProcess) {
-      return const SizedBox.shrink(); // Hide button for protected processes
-    }
-    final bool isDarkMode =
-        MacosTheme.of(context).brightness == Brightness.dark;
-    final Color playColor = MacosColors.systemGreenColor;
-    final Color pauseColor = MacosColors.systemOrangeColor;
-    // Use a contrasting icon color based on theme brightness
-    final Color iconColor = isDarkMode ? MacosColors.black : MacosColors.white;
+  Widget _buildActionDropdown(BuildContext context) {
+    // Define actions for the pulldown menu
+    final List<MacosPulldownMenuEntry> menuItems = [
+      if (!_isProtectedProcess)
+        MacosPulldownMenuItem(
+          title: Row(
+            children: [
+              Icon(
+                process.isPaused
+                    ? CupertinoIcons.play_arrow_solid
+                    : CupertinoIcons.pause_solid,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Text(process.isPaused ? 'Resume' : 'Pause'),
+            ],
+          ),
+          onTap: process.isPaused ? onResume : onPause,
+        ),
+      if (!_isProtectedProcess)
+        MacosPulldownMenuItem(
+          title: const Row(
+            children: [
+              Icon(CupertinoIcons.delete, size: 16),
+              SizedBox(width: 8),
+              Text('Kill'),
+            ],
+          ),
+          onTap: onKill,
+        ),
+      if (!_isProtectedProcess) const MacosPulldownMenuDivider(),
+      MacosPulldownMenuItem(
+        title: const Row(
+          children: [
+            Icon(CupertinoIcons.info, size: 16),
+            SizedBox(width: 8),
+            Text('Info'),
+          ],
+        ),
+        onTap:
+            onInfo ??
+            () {
+              showMacosAlertDialog(
+                context: context,
+                builder:
+                    (_) => MacosAlertDialog(
+                      appIcon:
+                          _buildLeadingIconForDialog(), // Use helper for icon
+                      title: Text('Process Info: ${process.name}'),
+                      message: Text(
+                        'PID: ${process.pid}\nCPU: ${process.cpuUsage.toStringAsFixed(1)}%\nCommand: ${process.command}',
+                        textAlign: TextAlign.center,
+                        style: MacosTheme.of(context).typography.body,
+                      ),
+                      primaryButton: PushButton(
+                        controlSize: ControlSize.large,
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ),
+              );
+            },
+      ),
+    ];
 
-    return PushButton(
-      controlSize: ControlSize.small,
-      onPressed: process.isPaused ? onResume : onPause,
-      color:
-          process.isPaused ? playColor : pauseColor, // Change background color
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 4,
-      ), // Adjust padding if needed
-      child:
-          process.isPaused
-              ? Icon(
-                CupertinoIcons.play_arrow_solid,
-                size: 14,
-                color: iconColor,
-              ) // Use Cupertino icon
-              : Icon(
-                CupertinoIcons.pause_solid,
-                size: 14,
-                color: iconColor,
-              ), // Use Cupertino icon
+    // Use MacosPulldownButton for actions
+    return MacosPulldownButton(
+      icon: CupertinoIcons.ellipsis_vertical,
+      items: menuItems,
     );
   }
 
-  Widget _buildInfoButton(BuildContext context) {
-    final bool isDarkMode =
-        MacosTheme.of(context).brightness == Brightness.dark;
-    final Color infoColor = MacosColors.systemGrayColor;
-    final Color iconColor = isDarkMode ? MacosColors.black : MacosColors.white;
-
-    return PushButton(
-      controlSize: ControlSize.small,
-      onPressed: () {
-        if (onInfo != null) {
-          onInfo!();
-        } else {
-          showMacosAlertDialog(
-            context: context,
-            builder:
-                (_) => MacosAlertDialog(
-                  appIcon: const FlutterLogo(),
-                  title: const Text('Process Info'),
-                  message: Text(
-                    'Name: ${process.name}\nPID: ${process.pid}\nCPU: ${process.cpuUsage.toStringAsFixed(1)}%\nCommand: ${process.command}',
+  // Helper to build the icon for the dialog, similar to list item but smaller
+  Widget _buildLeadingIconForDialog() {
+    return FutureBuilder<String?>(
+      future: ProcessService.getAppIconPath(process.name),
+      builder: (context, snapshot) {
+        final iconPath = snapshot.data;
+        if (iconPath != null && iconPath.isNotEmpty) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.file(
+              File(iconPath),
+              width: 32, // Slightly smaller for dialog
+              height: 32,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: _getProcessColor(),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  primaryButton: PushButton(
-                    controlSize: ControlSize.large,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('OK'),
-                  ),
-                ),
+                  child: const Icon(Icons.apps, color: Colors.white, size: 18),
+                );
+              },
+            ),
           );
         }
+        // Fallback icon
+        return Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: _getProcessColor(),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Icon(Icons.apps, color: Colors.white, size: 18),
+        );
       },
-      color: infoColor,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: Icon(CupertinoIcons.info, size: 14, color: iconColor),
-    );
-  }
-
-  Widget _buildKillButton(BuildContext context) {
-    if (_isProtectedProcess) {
-      return const SizedBox.shrink();
-    }
-    final bool isDarkMode =
-        MacosTheme.of(context).brightness == Brightness.dark;
-    final Color killColor = MacosColors.systemRedColor;
-    final Color iconColor = isDarkMode ? MacosColors.black : MacosColors.white;
-
-    return PushButton(
-      controlSize: ControlSize.small,
-      onPressed: onKill,
-      color: killColor,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: Icon(CupertinoIcons.delete_solid, size: 14, color: iconColor),
     );
   }
 
@@ -321,3 +354,5 @@ class ProcessListItem extends StatelessWidget {
     }
   }
 }
+
+// _ActionMenuItem class is no longer needed as we use MacosPulldownMenuItem directly

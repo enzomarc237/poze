@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:process_run/cmd_run.dart';
 import 'package:provider/provider.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
 import '../app.dart';
+import '../services/process_service.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -22,10 +26,7 @@ class _SettingsViewState extends State<SettingsView> {
   void initState() {
     super.initState();
     _refreshIntervalController = TextEditingController();
-    _themeTabController = MacosTabController(
-      initialIndex: 0,
-      length: 3,
-    );
+    _themeTabController = MacosTabController(initialIndex: 0, length: 3);
     _initStartAtLogin();
   }
 
@@ -167,25 +168,25 @@ class _SettingsViewState extends State<SettingsView> {
                         _startAtLoginLoading
                             ? const CupertinoActivityIndicator()
                             : MacosSwitch(
-                                value: _startAtLogin,
-                                onChanged: (value) async {
-                                  setState(() {
-                                    _startAtLogin = value;
-                                    _startAtLoginLoading = true;
-                                  });
-                                  try {
-                                    if (value) {
-                                      await launchAtStartup.enable();
-                                    } else {
-                                      await launchAtStartup.disable();
-                                    }
-                                  } finally {
-                                    setState(() {
-                                      _startAtLoginLoading = false;
-                                    });
+                              value: _startAtLogin,
+                              onChanged: (value) async {
+                                setState(() {
+                                  _startAtLogin = value;
+                                  _startAtLoginLoading = true;
+                                });
+                                try {
+                                  if (value) {
+                                    await launchAtStartup.enable();
+                                  } else {
+                                    await launchAtStartup.disable();
                                   }
-                                },
-                              ),
+                                } finally {
+                                  setState(() {
+                                    _startAtLoginLoading = false;
+                                  });
+                                }
+                              },
+                            ),
                       ],
                     ),
                     const SizedBox(height: 30),

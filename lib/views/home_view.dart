@@ -71,22 +71,24 @@ class _HomeViewState extends State<HomeView> {
   Future<void> _batchKill() async {
     final confirmed = await showMacosAlertDialog(
       context: context,
-      builder: (_) => MacosAlertDialog(
-        appIcon: const FlutterLogo(),
-        title: const Text('Confirmer la terminaison multiple'),
-        message: Text(
-            'Êtes-vous sûr de vouloir terminer ${_selectedPids.length} processus sélectionnés ? Cette action est irréversible.'),
-        primaryButton: PushButton(
-          controlSize: ControlSize.regular,
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Terminer'),
-        ),
-        secondaryButton: PushButton(
-          controlSize: ControlSize.regular,
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Annuler'),
-        ),
-      ),
+      builder:
+          (_) => MacosAlertDialog(
+            appIcon: const FlutterLogo(),
+            title: const Text('Confirmer la terminaison multiple'),
+            message: Text(
+              'Êtes-vous sûr de vouloir terminer ${_selectedPids.length} processus sélectionnés ? Cette action est irréversible.',
+            ),
+            primaryButton: PushButton(
+              controlSize: ControlSize.large,
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Terminer'),
+            ),
+            secondaryButton: PushButton(
+              controlSize: ControlSize.large,
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annuler'),
+            ),
+          ),
     );
     if (confirmed == true) {
       await _processService.killProcesses(_selectedPids.toList());
@@ -228,7 +230,7 @@ class _HomeViewState extends State<HomeView> {
             title: const Text('Erreur'),
             message: Text(message),
             primaryButton: PushButton(
-              controlSize: ControlSize.regular,
+              controlSize: ControlSize.large,
               onPressed: () => Navigator.pop(context),
               child: const Text('OK'),
             ),
@@ -248,10 +250,15 @@ class _HomeViewState extends State<HomeView> {
 
     // Search
     if (_searchQuery.isNotEmpty && _searchQuery.length > 1) {
-      filtered = filtered.where((process) {
-        return process.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            process.command.toLowerCase().contains(_searchQuery.toLowerCase());
-      }).toList();
+      filtered =
+          filtered.where((process) {
+            return process.name.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ||
+                process.command.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                );
+          }).toList();
     }
 
     return filtered;
@@ -260,35 +267,51 @@ class _HomeViewState extends State<HomeView> {
   Future<void> _killProcess(ProcessModel process) async {
     final confirmed = await showMacosAlertDialog(
       context: context,
-      builder: (_) => MacosAlertDialog(
-        appIcon: const FlutterLogo(),
-        title: const Text('Confirmer la terminaison'),
-        message: Text(
-            'Êtes-vous sûr de vouloir terminer le processus "${process.name}" (PID: ${process.pid}) ? Cette action est irréversible.'),
-        primaryButton: PushButton(
-          controlSize: ControlSize.regular,
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Terminer'),
-        ),
-        secondaryButton: PushButton(
-          controlSize: ControlSize.regular,
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Annuler'),
-        ),
-      ),
+      builder:
+          (_) => MacosAlertDialog(
+            appIcon: const FlutterLogo(),
+            title: const Text('Confirmer la terminaison'),
+            message: Text(
+              'Êtes-vous sûr de vouloir terminer le processus "${process.name}" (PID: ${process.pid}) ? Cette action est irréversible.',
+            ),
+            primaryButton: PushButton(
+              controlSize: ControlSize.large,
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Terminer'),
+            ),
+            secondaryButton: PushButton(
+              controlSize: ControlSize.large,
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annuler'),
+            ),
+          ),
     );
     if (confirmed == true) {
       final success = await _processService.killProcess(process.pid);
       if (success) {
-        setState(() {
-          _processes.removeWhere((p) => p.pid == process.pid);
-        });
+        _backgroundFetchService.fetchData();
+        _showSuccessDialog('Le processus a été terminé avec succès.');
       } else {
-        _showErrorDialog(
-          'Impossible de terminer le processus ${process.name} (PID: ${process.pid})',
-        );
+        _showErrorDialog('Échec de la terminaison du processus.');
       }
     }
+  }
+
+  void _showSuccessDialog(String message) {
+    showMacosAlertDialog(
+      context: context,
+      builder:
+          (_) => MacosAlertDialog(
+            appIcon: const FlutterLogo(),
+            title: const Text('Succès'),
+            message: Text(message),
+            primaryButton: PushButton(
+              controlSize: ControlSize.large,
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ),
+    );
   }
 
   @override
@@ -341,7 +364,9 @@ class _HomeViewState extends State<HomeView> {
                 icon: CupertinoIcons.sort_down,
                 items: [
                   MacosPulldownMenuItem(
-                    title: Text("${_sortBy == SortBy.cpuUsage ? '✓' : ''} Par CPU (décroissant)"),
+                    title: Text(
+                      "${_sortBy == SortBy.cpuUsage ? '✓' : ''} Par CPU (décroissant)",
+                    ),
                     onTap: () {
                       setState(() {
                         _sortBy = SortBy.cpuUsage;
@@ -352,7 +377,7 @@ class _HomeViewState extends State<HomeView> {
                     },
                   ),
                   MacosPulldownMenuItem(
-                    title:  Text("${_sortBy == SortBy.name ? '✓' : ''} Par Nom"),
+                    title: Text("${_sortBy == SortBy.name ? '✓' : ''} Par Nom"),
                     onTap: () {
                       setState(() {
                         _sortBy = SortBy.name;
@@ -407,21 +432,34 @@ class _HomeViewState extends State<HomeView> {
                           MacosPulldownButton(
                             items: [
                               MacosPulldownMenuItem(
-                                title: Text("${_filterState == 'all' ? '✓ ' : ''}Tous"),
-                                onTap: () => setState(() => _filterState = 'all'),
+                                title: Text(
+                                  "${_filterState == 'all' ? '✓ ' : ''}Tous",
+                                ),
+                                onTap:
+                                    () => setState(() => _filterState = 'all'),
                               ),
                               MacosPulldownMenuItem(
-                                title: Text("${_filterState == 'running' ? '✓ ' : ''}Actifs"),
-                                onTap: () => setState(() => _filterState = 'running'),
+                                title: Text(
+                                  "${_filterState == 'running' ? '✓ ' : ''}Actifs",
+                                ),
+                                onTap:
+                                    () => setState(
+                                      () => _filterState = 'running',
+                                    ),
                               ),
                               MacosPulldownMenuItem(
-                                title: Text("${_filterState == 'paused' ? '✓ ' : ''}En pause"),
-                                onTap: () => setState(() => _filterState = 'paused'),
+                                title: Text(
+                                  "${_filterState == 'paused' ? '✓ ' : ''}En pause",
+                                ),
+                                onTap:
+                                    () =>
+                                        setState(() => _filterState = 'paused'),
                               ),
                             ],
-                            title: _filterState == 'all'
-                                ? 'Tous'
-                                : _filterState == 'running'
+                            title:
+                                _filterState == 'all'
+                                    ? 'Tous'
+                                    : _filterState == 'running'
                                     ? 'Actifs'
                                     : 'En pause',
                           ),
@@ -557,15 +595,16 @@ class _HomeViewState extends State<HomeView> {
         return GestureDetector(
           onTap: () => _toggleSelectProcess(process.pid),
           child: Container(
-            decoration: selected
-                ? BoxDecoration(
-                    border: Border.all(
-                      color: MacosColors.systemBlueColor,
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  )
-                : null,
+            decoration:
+                selected
+                    ? BoxDecoration(
+                      border: Border.all(
+                        color: MacosColors.systemBlueColor,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    )
+                    : null,
             child: ProcessListItem(
               process: process,
               onPause: () => _pauseProcess(process),
@@ -578,68 +617,78 @@ class _HomeViewState extends State<HomeView> {
       },
     );
   }
+
   Future<void> _showProcessInfo(ProcessModel process) async {
     showMacosAlertDialog(
       context: context,
-      builder: (_) => MacosAlertDialog(
-        appIcon: const FlutterLogo(),
-        title: Text('Chargement...'),
-        message: const Text('Récupération des informations détaillées...'),
-        primaryButton: PushButton(
-          controlSize: ControlSize.regular,
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Fermer'),
-        ),
-      ),
+      builder:
+          (_) => MacosAlertDialog(
+            appIcon: const FlutterLogo(),
+            title: Text('Chargement...'),
+            message: const Text('Récupération des informations détaillées...'),
+            primaryButton: PushButton(
+              controlSize: ControlSize.large,
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Fermer'),
+            ),
+          ),
     );
     final details = await _processService.getProcessDetails(process);
     Navigator.of(context).pop(); // Close loading dialog
 
     if (details == null) {
-      _showErrorDialog('Impossible de récupérer les informations du processus.');
+      _showErrorDialog(
+        'Impossible de récupérer les informations du processus.',
+      );
       return;
     }
 
     showMacosAlertDialog(
       context: context,
-      builder: (_) => MacosAlertDialog(
-        appIcon: const FlutterLogo(),
-        title: Text('Détails pour ${details.name} (PID: ${details.pid})'),
-        message: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Mémoire: ${details.memoryKb != null ? '${(details.memoryKb! / 1024).toStringAsFixed(1)} MB' : 'N/A'}'),
-            Text('Threads: ${details.threads ?? 'N/A'}'),
-            const SizedBox(height: 8),
-            Text('Fichiers ouverts:'),
-            if (details.openFiles != null && details.openFiles!.isNotEmpty)
-              SizedBox(
-                height: 120,
-                width: 400,
-                child: Scrollbar(
-                  child: ListView(
-                    children: details.openFiles!
-                        .take(50)
-                        .map((f) => Text(
-                              f,
-                              style: const TextStyle(fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
-                            ))
-                        .toList(),
-                  ),
+      builder:
+          (_) => MacosAlertDialog(
+            appIcon: const FlutterLogo(),
+            title: Text('Détails pour ${details.name} (PID: ${details.pid})'),
+            message: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Mémoire: ${details.memoryKb != null ? '${(details.memoryKb! / 1024).toStringAsFixed(1)} MB' : 'N/A'}',
                 ),
-              )
-            else
-              const Text('Aucun ou accès refusé.'),
-          ],
-        ),
-        primaryButton: PushButton(
-          controlSize: ControlSize.regular,
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Fermer'),
-        ),
-      ),
+                Text('Threads: ${details.threads ?? 'N/A'}'),
+                const SizedBox(height: 8),
+                Text('Fichiers ouverts:'),
+                if (details.openFiles != null && details.openFiles!.isNotEmpty)
+                  SizedBox(
+                    height: 120,
+                    width: 400,
+                    child: Scrollbar(
+                      child: ListView(
+                        children:
+                            details.openFiles!
+                                .take(50)
+                                .map(
+                                  (f) => Text(
+                                    f,
+                                    style: const TextStyle(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                )
+                                .toList(),
+                      ),
+                    ),
+                  )
+                else
+                  const Text('Aucun ou accès refusé.'),
+              ],
+            ),
+            primaryButton: PushButton(
+              controlSize: ControlSize.large,
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Fermer'),
+            ),
+          ),
     );
   }
 }

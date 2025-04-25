@@ -384,17 +384,17 @@ class ProcessService {
  // Get detailed info for a process: memory, threads, open files
  Future<ProcessModel?> getProcessDetails(ProcessModel process) async {
    try {
-     // Get memory and thread count
+     // Get memory (rss)
      final psResult = await _shell.run(
-       'ps -p ${process.pid} -o rss=,nlwp=',
+       'ps -p ${process.pid} -o rss=',
      );
      int? memoryKb;
-     int? threads;
+     // int? threads; // nlwp not supported on this system
      if (psResult.isNotEmpty && psResult.first.exitCode == 0) {
        final parts = psResult.first.outText.trim().split(RegExp(r'\s+'));
-       if (parts.length >= 2) {
+       if (parts.isNotEmpty) {
          memoryKb = int.tryParse(parts[0]);
-         threads = int.tryParse(parts[1]);
+         // threads = int.tryParse(parts[1]); // nlwp not supported
        }
      }
 
@@ -414,7 +414,7 @@ class ProcessService {
 
      return process.copyWith(
        memoryKb: memoryKb,
-       threads: threads,
+       threads: null, // nlwp not supported
        openFiles: openFiles,
      );
    } catch (e) {

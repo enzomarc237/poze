@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:tray_manager/tray_manager.dart';
+import 'package:window_manager/window_manager.dart';
 import 'dart:io';
 import 'app.dart';
 
@@ -12,10 +14,15 @@ Future<void> _configureMacosWindowUtils() async {
   await config.apply();
 }
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await _configureMacosWindowUtils();
+// Window initializer
+Future initWindow() async {
+  await windowManager.ensureInitialized();
+  await windowManager.waitUntilReadyToShow(WindowOptions(center: true));
 
+  launchAtStartup.setup(appName: "Poze", appPath: Platform.resolvedExecutable);
+}
+
+Future initTray() async {
   if (Platform.isMacOS) {
     await TrayManager.instance.setIcon('assets/app_icon.png');
     await TrayManager.instance.setContextMenu(
@@ -29,6 +36,13 @@ Future<void> main() async {
     );
     TrayManager.instance.addListener(_PozeTrayListener());
   }
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await _configureMacosWindowUtils();
+  await initWindow();
+  await initTray();
 
   runApp(const App());
 }
@@ -40,10 +54,11 @@ class _PozeTrayListener with TrayListener {
   }
 
   @override
-  void onTrayMenuItemClick(MenuItem menuItem) {
+  void onTrayMenuItemClick(MenuItem menuItem) async {
     switch (menuItem.key) {
       case 'show':
         // Optionally bring window to front (implementation depends on window manager)
+        await windowManager.show();
         break;
       case 'quit':
         TrayManager.instance.destroy();
