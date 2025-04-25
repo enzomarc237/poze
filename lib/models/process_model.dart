@@ -64,6 +64,22 @@ class ProcessModel {
     );
   }
 
+  /// Creates a [ProcessModel] from an osquery JSON row.
+  factory ProcessModel.fromOsquery(Map<String, dynamic> m) {
+    final pid = m['pid']?.toString() ?? '';
+    final name = m['name']?.toString() ?? '';
+    final command = m['path']?.toString() ?? '';
+    final cpuUsage = (m['cpu_time'] is num)
+        ? (m['cpu_time'] as num).toDouble()
+        : 0.0;
+    return ProcessModel(
+      pid: pid,
+      name: name,
+      command: command,
+      cpuUsage: cpuUsage,
+    );
+  }
+
   @override
   String toString() {
     return 'ProcessModel(pid: $pid, name: $name, cpuUsage: $cpuUsage, isPaused: $isPaused, iconPath: $iconPath)';
