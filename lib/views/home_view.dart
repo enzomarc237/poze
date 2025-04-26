@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:poze/views/settings_view.dart';
+import 'package:poze/views/process_detail_view.dart';
 import 'package:provider/provider.dart';
 import '../models/process_model.dart';
 import '../models/system_stats.dart';
-import '../services/process_service.dart';
+import '../services/osquery_service.dart';
 import '../services/system_service.dart';
 import '../services/background_fetch_service.dart';
+import '../services/process_service.dart' show SortBy;
 import '../widgets/process_list_item.dart';
 import '../widgets/cpu_usage_chart.dart';
 import '../app.dart';
@@ -21,10 +23,9 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  final ProcessService _processService = ProcessService();
+  final OsqueryService _osqueryService = OsqueryService();
   final SystemService _systemService = SystemService();
-  final BackgroundFetchService _backgroundFetchService =
-      BackgroundFetchService();
+  final BackgroundFetchService _backgroundFetchService = BackgroundFetchService();
 
   List<ProcessModel> _processes = [];
   SystemStats _systemStats = SystemStats.initial();
@@ -63,8 +64,12 @@ class _HomeViewState extends State<HomeView> {
 
   Future<void> _batchPause() async {
     final names = _selectedProcesses.map((p) => p.name).toList();
-    await _processService.pauseProcesses(names);
-    _clearSelection();
+    await _osqueryService.pauseProcesses(names);
+    final procs = await _osqueryService.queryProcesses();
+    setState(() {
+      _processes = procs;
+      _selectedPids.clear();
+    });
     _backgroundFetchService.fetchData();
   }
 
@@ -91,8 +96,12 @@ class _HomeViewState extends State<HomeView> {
           ),
     );
     if (confirmed == true) {
-      await _processService.killProcesses(_selectedPids.toList());
-      _clearSelection();
+      await _osqueryService.killProcesses(_selectedPids.toList());
+      final procs = await _osqueryService.queryProcesses();
+      setState(() {
+        _processes = procs;
+        _selectedPids.clear();
+      });
       _backgroundFetchService.fetchData();
     }
   }
@@ -101,6 +110,24 @@ class _HomeViewState extends State<HomeView> {
   void initState() {
     super.initState();
     _initializeBackgroundService();
+    _initializeOsquery();
+  }
+
+  /// Initialize osquery polling for process data.
+  Future<void> _initializeOsquery() async {
+    final installed = await _osqueryService.isInstalled();
+    if (!installed) return;
+    final interval = Duration(
+      seconds: Provider.of<AppState>(context, listen: false).refreshInterval,
+    );
+    _processDataSubscription = _osqueryService
+        .watchProcesses(interval)
+        .listen((processes) {
+      setState(() {
+        _processes = processes;
+        _isLoading = false;
+      });
+    });
   }
 
   Future<void> _initializeBackgroundService() async {
@@ -110,24 +137,14 @@ class _HomeViewState extends State<HomeView> {
 
     await _backgroundFetchService.initialize();
 
-    // Subscribe to process data updates
-    _processDataSubscription = _backgroundFetchService.processDataStream.listen(
-      (processes) {
+    // Subscribe to system stats updates
+    _systemDataSubscription = _backgroundFetchService.systemDataStream.listen(
+      (stats) {
         setState(() {
-          _processes = processes;
-          _isLoading = false;
+          _systemStats = stats;
         });
       },
     );
-
-    // Subscribe to system stats updates
-    _systemDataSubscription = _backgroundFetchService.systemDataStream.listen((
-      stats,
-    ) {
-      setState(() {
-        _systemStats = stats;
-      });
-    });
 
     // Subscribe to error messages
     _errorSubscription = _backgroundFetchService.errorStream.listen((errorMsg) {
@@ -190,7 +207,7 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Future<void> _pauseProcess(ProcessModel process) async {
-    final success = await _processService.pauseProcess(process.name);
+    final success = await _osqueryService.pauseProcess(process.name);
     if (success) {
       setState(() {
         final index = _processes.indexWhere((p) => p.pid == process.pid);
@@ -206,7 +223,7 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Future<void> _resumeProcess(ProcessModel process) async {
-    final success = await _processService.resumeProcess(process.name);
+    final success = await _osqueryService.resumeProcess(process.name);
     if (success) {
       setState(() {
         final index = _processes.indexWhere((p) => p.pid == process.pid);
@@ -287,7 +304,7 @@ class _HomeViewState extends State<HomeView> {
           ),
     );
     if (confirmed == true) {
-      final success = await _processService.killProcess(process.pid);
+      final success = await _osqueryService.killProcess(process.pid);
       if (success) {
         _backgroundFetchService.fetchData();
         _showSuccessDialog('Le processus a été terminé avec succès.');
@@ -633,7 +650,7 @@ class _HomeViewState extends State<HomeView> {
             ),
           ),
     );
-    final details = await _processService.getProcessDetails(process);
+    final details = await _osqueryService.getProcessDetails(process);
     Navigator.of(context).pop(); // Close loading dialog
 
     if (details == null) {
@@ -643,52 +660,10 @@ class _HomeViewState extends State<HomeView> {
       return;
     }
 
-    showMacosAlertDialog(
-      context: context,
-      builder:
-          (_) => MacosAlertDialog(
-            appIcon: const FlutterLogo(),
-            title: Text('Détails pour ${details.name} (PID: ${details.pid})'),
-            message: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Mémoire: ${details.memoryKb != null ? '${(details.memoryKb! / 1024).toStringAsFixed(1)} MB' : 'N/A'}',
-                ),
-                Text('Threads: ${details.threads ?? 'N/A'}'),
-                const SizedBox(height: 8),
-                Text('Fichiers ouverts:'),
-                if (details.openFiles != null && details.openFiles!.isNotEmpty)
-                  SizedBox(
-                    height: 120,
-                    width: 400,
-                    child: Scrollbar(
-                      child: ListView(
-                        children:
-                            details.openFiles!
-                                .take(50)
-                                .map(
-                                  (f) => Text(
-                                    f,
-                                    style: const TextStyle(fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                )
-                                .toList(),
-                      ),
-                    ),
-                  )
-                else
-                  const Text('Aucun ou accès refusé.'),
-              ],
-            ),
-            primaryButton: PushButton(
-              controlSize: ControlSize.large,
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Fermer'),
-            ),
-          ),
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (_) => ProcessDetailView(details: details),
+      ),
     );
   }
 }
