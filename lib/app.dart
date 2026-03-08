@@ -20,8 +20,11 @@ class AppState extends ChangeNotifier {
   bool get autoRefresh => _autoRefresh;
   int get refreshInterval => _refreshInterval;
 
+  /// Completes when persisted settings have been loaded from SharedPreferences.
+  late final Future<void> ready;
+
   AppState() {
-    _loadSettings();
+    ready = _loadSettings();
   }
 
   Future<void> _loadSettings() async {
@@ -132,33 +135,6 @@ class _PozeMacosWindowState extends State<PozeMacosWindow> {
   @override
   Widget build(BuildContext context) {
     return MacosWindow(
-      // sidebar: Sidebar(
-      //   minWidth: 64,
-      //   maxWidth: 64,
-      //   isResizable: false,
-      //   builder: (context, scrollController) {
-      //     return SidebarItems(
-      //       currentIndex: _selectedViewIndex,
-      //       onChanged: (index) {
-      //         setState(() {
-      //           _selectedViewIndex = index;
-      //         });
-      //       },
-      //       items: [
-      //         SidebarItem(
-      //           leading: MacosIcon(Icons.home),
-      //           label: const SizedBox.shrink(),
-      //         ),
-      //         SidebarItem(
-      //           leading: MacosIcon(Icons.settings),
-      //           label: const SizedBox.shrink(),
-      //         ),
-      //       ],
-      //     );
-      //   },
-      //   // Remove bottom controls for minimalism
-      //   bottom: null,
-      // ),
       child: IndexedStack(
         index: _selectedViewIndex,
         children: const [HomeView(), SettingsView()],

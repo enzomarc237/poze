@@ -355,5 +355,3 @@ class ProcessListItem extends StatelessWidget {
     }
   }
 }
-
-// _ActionMenuItem class is no longer needed as we use MacosPulldownMenuItem directly

@@ -1,13 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:process_run/cmd_run.dart';
 import 'package:provider/provider.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
 import '../app.dart';
-import '../services/process_service.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -18,7 +14,6 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView> {
   late TextEditingController _refreshIntervalController;
-  late MacosTabController _themeTabController;
   bool _startAtLogin = false;
   bool _startAtLoginLoading = true;
 
@@ -26,7 +21,6 @@ class _SettingsViewState extends State<SettingsView> {
   void initState() {
     super.initState();
     _refreshIntervalController = TextEditingController();
-    _themeTabController = MacosTabController(initialIndex: 0, length: 3);
     _initStartAtLogin();
   }
 
@@ -51,25 +45,11 @@ class _SettingsViewState extends State<SettingsView> {
     final appState = Provider.of<AppState>(context, listen: false);
     final refreshInterval = appState.refreshInterval;
     _refreshIntervalController.text = refreshInterval.toString();
-
-    // Set the theme tab controller index based on appState.themeMode
-    switch (appState.themeMode) {
-      case ThemeMode.system:
-        _themeTabController.index = 0;
-        break;
-      case ThemeMode.light:
-        _themeTabController.index = 1;
-        break;
-      case ThemeMode.dark:
-        _themeTabController.index = 2;
-        break;
-    }
   }
 
   @override
   void dispose() {
     _refreshIntervalController.dispose();
-    _themeTabController.dispose();
     super.dispose();
   }
 

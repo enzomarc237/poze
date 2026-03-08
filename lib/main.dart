@@ -15,14 +15,14 @@ Future<void> _configureMacosWindowUtils() async {
 }
 
 // Window initializer
-Future initWindow() async {
+Future<void> initWindow() async {
   await windowManager.ensureInitialized();
   await windowManager.waitUntilReadyToShow(WindowOptions(center: true));
 
   launchAtStartup.setup(appName: "Poze", appPath: Platform.resolvedExecutable);
 }
 
-Future initTray() async {
+Future<void> initTray() async {
   if (Platform.isMacOS) {
     await TrayManager.instance.setIcon('assets/app_icon.png');
     await TrayManager.instance.setContextMenu(

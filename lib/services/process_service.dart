@@ -10,6 +10,10 @@ class ProcessService {
   // Cache for app icons to avoid repeated AppleScript calls
   static Map<String, String?> iconPathCache = {};
 
+  // Returns true only when [pid] consists entirely of ASCII digits.
+  // Used to guard all shell commands that interpolate a PID string.
+  static bool _isValidPid(String pid) => RegExp(r'^\d+$').hasMatch(pid);
+
   // Récupérer uniquement les applications GUI lancées par l'utilisateur
   Future<List<ProcessModel>> getRunningProcesses() async {
     try {
@@ -45,13 +49,13 @@ class ProcessService {
 
       return processes;
     } catch (e) {
-      // print('Erreur lors de la récupération des applications: $e');
       return [];
     }
   }
 
   // Obtenir l'utilisation CPU pour un PID spécifique
   Future<double> _getProcessCpuUsage(String pid) async {
+    if (!_isValidPid(pid)) return 0.0;
     try {
       final result = await _shell.run('ps -o %cpu -p $pid');
 
@@ -61,7 +65,6 @@ class ProcessService {
 
       return double.tryParse(lines.first.trim()) ?? 0.0;
     } catch (e) {
-      // print('Erreur lors de la récupération de l\'utilisation CPU: $e');
       return 0.0;
     }
   }
@@ -179,19 +182,14 @@ class ProcessService {
 
         // Assuming the first result contains the output
         appListResult = results.first;
-
-        // Original check (redundant now but kept for safety)
-        if (appListResult.exitCode != 0) {
-          throw Exception(
-            'AppleScript execution failed: ${appListResult.errText}',
-          );
-        }
       } finally {
         // Ensure the temporary file is deleted
         try {
           await tempScriptFile?.delete();
         } catch (e) {
-          // print('Error deleting temporary script file: $e');
+          // Deletion failure is non-critical: the OS will reclaim the temp
+          // file eventually, and it does not affect the correctness of the
+          // process data already retrieved above.
         }
       }
 
@@ -270,7 +268,6 @@ class ProcessService {
 
       return processes;
     } catch (e) {
-      // print('Erreur lors de la récupération des applications: $e');
       return [];
     }
   }
@@ -281,7 +278,6 @@ class ProcessService {
       final results = await _shell.run('killall -STOP "$processName"');
       return results.every((result) => result.exitCode == 0);
     } catch (e) {
-      // print('Erreur lors de la mise en pause du processus: $e');
       return false;
     }
   }
@@ -292,7 +288,6 @@ class ProcessService {
       final results = await _shell.run('killall -CONT "$processName"');
       return results.every((result) => result.exitCode == 0);
     } catch (e) {
-      // print('Erreur lors de la reprise du processus: $e');
       return false;
     }
   }
@@ -335,7 +330,6 @@ class ProcessService {
   
       return pauseStates;
     } catch (e) {
-      // print('Erreur lors de la vérification de l\'état des processus: $e');
       return {};
     }
   }
@@ -372,17 +366,21 @@ class ProcessService {
   }
   // Terminate (kill) a process by PID
   Future<bool> killProcess(String pid) async {
+    // Validate that pid contains only digits to prevent shell injection.
+    if (!_isValidPid(pid)) {
+      return false;
+    }
     try {
       final results = await _shell.run('kill -9 $pid');
       return results.every((result) => result.exitCode == 0);
     } catch (e) {
-      // print('Erreur lors de la terminaison du processus: $e');
       return false;
     }
   }
 
  // Get detailed info for a process: memory, threads, open files
  Future<ProcessModel?> getProcessDetails(ProcessModel process) async {
+   if (!_isValidPid(process.pid)) return null;
    try {
      // Get memory (rss)
      final psResult = await _shell.run(
