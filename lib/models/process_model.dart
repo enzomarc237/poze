@@ -1,8 +1,3 @@
-import 'dart:io';
-
-import 'package:poze/services/process_service.dart';
-import 'package:process_run/shell.dart';
-
 class ProcessModel {
   final String pid;
   final String name;
@@ -25,30 +20,6 @@ class ProcessModel {
     this.threads,
     this.openFiles,
   });
-
-  // Cette méthode n'est plus utilisée car nous n'utilisons plus ps aux
-  // mais conservée pour référence ou utilisation future
-  factory ProcessModel.fromPsOutput(String line) {
-    final parts = line.trim().split(RegExp(r'\s+'));
-    if (parts.length < 11) {
-      throw Exception('Format de sortie ps invalide: $line');
-    }
-    final pid = parts[1];
-    final cpu = double.tryParse(parts[2]) ?? 0.0;
-    final commandFull = parts.sublist(10).join(' ');
-    final commandParts = commandFull.split('/');
-    final name =
-        commandParts.isNotEmpty
-            ? commandParts.last.split(' ').first
-            : commandFull;
-    return ProcessModel(
-      pid: pid,
-      name: name,
-      command: commandFull,
-      cpuUsage: cpu,
-      iconPath: null,
-    );
-  }
 
   factory ProcessModel.fromAppleScript({
     required String pid,

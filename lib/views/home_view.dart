@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import '../models/process_model.dart';
 import '../models/system_stats.dart';
 import '../services/osquery_service.dart';
-import '../services/system_service.dart';
 import '../services/background_fetch_service.dart';
 import '../services/process_service.dart' show SortBy;
 import '../widgets/process_list_item.dart';
@@ -24,7 +23,6 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   final OsqueryService _osqueryService = OsqueryService();
-  final SystemService _systemService = SystemService();
   final BackgroundFetchService _backgroundFetchService = BackgroundFetchService();
 
   List<ProcessModel> _processes = [];
@@ -33,10 +31,16 @@ class _HomeViewState extends State<HomeView> {
   bool _isLoading = true;
   String _searchQuery = '';
   StreamSubscription? _processDataSubscription;
+  StreamSubscription? _bgProcessDataSubscription;
   StreamSubscription? _systemDataSubscription;
   StreamSubscription? _errorSubscription;
   SortBy _sortBy = SortBy.cpuUsage;
   String _filterState = 'all'; // 'all', 'running', 'paused'
+
+  // Track last-known refresh settings to avoid restarting the timer on every
+  // didChangeDependencies call when nothing has actually changed.
+  bool? _lastAutoRefresh;
+  int? _lastRefreshInterval;
 
   // Batch selection state
   final Set<String> _selectedPids = {};
@@ -65,11 +69,18 @@ class _HomeViewState extends State<HomeView> {
   Future<void> _batchPause() async {
     final names = _selectedProcesses.map((p) => p.name).toList();
     await _osqueryService.pauseProcesses(names);
-    final procs = await _osqueryService.queryProcesses();
-    setState(() {
-      _processes = procs;
-      _selectedPids.clear();
-    });
+    try {
+      final procs = await _osqueryService.queryProcesses();
+      if (mounted) {
+        setState(() {
+          _processes = _applySortOrder(procs);
+          _selectedPids.clear();
+        });
+      }
+    } catch (_) {
+      // osquery not available – refresh via background service instead
+      if (mounted) setState(() => _selectedPids.clear());
+    }
     _backgroundFetchService.fetchData();
   }
 
@@ -97,11 +108,18 @@ class _HomeViewState extends State<HomeView> {
     );
     if (confirmed == true) {
       await _osqueryService.killProcesses(_selectedPids.toList());
-      final procs = await _osqueryService.queryProcesses();
-      setState(() {
-        _processes = procs;
-        _selectedPids.clear();
-      });
+      try {
+        final procs = await _osqueryService.queryProcesses();
+        if (mounted) {
+          setState(() {
+            _processes = _applySortOrder(procs);
+            _selectedPids.clear();
+          });
+        }
+      } catch (_) {
+        // osquery not available – refresh via background service instead
+        if (mounted) setState(() => _selectedPids.clear());
+      }
       _backgroundFetchService.fetchData();
     }
   }
@@ -123,10 +141,12 @@ class _HomeViewState extends State<HomeView> {
     _processDataSubscription = _osqueryService
         .watchProcesses(interval)
         .listen((processes) {
-      setState(() {
-        _processes = processes;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _processes = _applySortOrder(processes);
+          _isLoading = false;
+        });
+      }
     });
   }
 
@@ -137,12 +157,29 @@ class _HomeViewState extends State<HomeView> {
 
     await _backgroundFetchService.initialize();
 
+    // Subscribe to process data updates from the background isolate.
+    // This is the primary data source when osquery is not installed.
+    _bgProcessDataSubscription = _backgroundFetchService.processDataStream
+        .listen((processes) {
+      if (mounted) {
+        setState(() {
+          // Only update if osquery is not actively providing data.
+          if (_processDataSubscription == null) {
+            _processes = _applySortOrder(processes);
+          }
+          _isLoading = false;
+        });
+      }
+    });
+
     // Subscribe to system stats updates
     _systemDataSubscription = _backgroundFetchService.systemDataStream.listen(
       (stats) {
-        setState(() {
-          _systemStats = stats;
-        });
+        if (mounted) {
+          setState(() {
+            _systemStats = stats;
+          });
+        }
       },
     );
 
@@ -163,7 +200,8 @@ class _HomeViewState extends State<HomeView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Redémarrer le timer si les paramètres changent
+    // Restart the timer only when refresh settings have actually changed,
+    // not on every dependency change.
     _restartRefreshTimerIfNeeded();
   }
 
@@ -171,6 +209,7 @@ class _HomeViewState extends State<HomeView> {
   void dispose() {
     _cancelRefreshTimer();
     _processDataSubscription?.cancel();
+    _bgProcessDataSubscription?.cancel();
     _systemDataSubscription?.cancel();
     _errorSubscription?.cancel();
     _backgroundFetchService.dispose();
@@ -183,8 +222,18 @@ class _HomeViewState extends State<HomeView> {
   }
 
   void _restartRefreshTimerIfNeeded() {
+    final appState = Provider.of<AppState>(context, listen: false);
+    // Skip restart if nothing changed since last call.
+    if (_lastAutoRefresh == appState.autoRefresh &&
+        _lastRefreshInterval == appState.refreshInterval) {
+      return;
+    }
+    _lastAutoRefresh = appState.autoRefresh;
+    _lastRefreshInterval = appState.refreshInterval;
     _cancelRefreshTimer();
-    _startAutoRefresh();
+    if (appState.autoRefresh) {
+      _startAutoRefresh();
+    }
   }
 
   void _startAutoRefresh() {
@@ -204,6 +253,23 @@ class _HomeViewState extends State<HomeView> {
     });
 
     _backgroundFetchService.fetchData();
+  }
+
+  // Apply the current sort order to a process list without mutating it.
+  List<ProcessModel> _applySortOrder(List<ProcessModel> processes) {
+    final sorted = List<ProcessModel>.from(processes);
+    switch (_sortBy) {
+      case SortBy.cpuUsage:
+        sorted.sort((a, b) => b.cpuUsage.compareTo(a.cpuUsage));
+        break;
+      case SortBy.name:
+        sorted.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case SortBy.pid:
+        sorted.sort((a, b) => a.pid.compareTo(b.pid));
+        break;
+    }
+    return sorted;
   }
 
   Future<void> _pauseProcess(ProcessModel process) async {
@@ -335,16 +401,6 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, appState, _) {
-        if (_refreshTimer == null && appState.autoRefresh) {
-          _startAutoRefresh();
-        } else if (_refreshTimer != null && !appState.autoRefresh) {
-          _cancelRefreshTimer();
-        } else if (_refreshTimer != null && appState.autoRefresh) {
-          // If refreshInterval changed, restart timer
-          _cancelRefreshTimer();
-          _startAutoRefresh();
-        }
-
         return MacosScaffold(
           toolBar: ToolBar(
             title: const Text('Poze - Gestionnaire d\'Applications'),
@@ -387,9 +443,7 @@ class _HomeViewState extends State<HomeView> {
                     onTap: () {
                       setState(() {
                         _sortBy = SortBy.cpuUsage;
-                        _processes.sort(
-                          (a, b) => b.cpuUsage.compareTo(a.cpuUsage),
-                        );
+                        _processes = _applySortOrder(_processes);
                       });
                     },
                   ),
@@ -398,7 +452,7 @@ class _HomeViewState extends State<HomeView> {
                     onTap: () {
                       setState(() {
                         _sortBy = SortBy.name;
-                        _processes.sort((a, b) => a.name.compareTo(b.name));
+                        _processes = _applySortOrder(_processes);
                       });
                     },
                   ),
@@ -407,7 +461,7 @@ class _HomeViewState extends State<HomeView> {
                     onTap: () {
                       setState(() {
                         _sortBy = SortBy.pid;
-                        _processes.sort((a, b) => a.pid.compareTo(b.pid));
+                        _processes = _applySortOrder(_processes);
                       });
                     },
                   ),
@@ -418,9 +472,9 @@ class _HomeViewState extends State<HomeView> {
           children: [
             ContentArea(
               builder: (context, scrollController) {
-                // if (_isLoading) {
-                //   return const Center(child: ProgressCircle());
-                // }
+                if (_isLoading) {
+                  return const Center(child: ProgressCircle());
+                }
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -641,7 +695,7 @@ class _HomeViewState extends State<HomeView> {
       builder:
           (_) => MacosAlertDialog(
             appIcon: const FlutterLogo(),
-            title: Text('Chargement...'),
+            title: const Text('Chargement...'),
             message: const Text('Récupération des informations détaillées...'),
             primaryButton: PushButton(
               controlSize: ControlSize.large,
@@ -651,6 +705,8 @@ class _HomeViewState extends State<HomeView> {
           ),
     );
     final details = await _osqueryService.getProcessDetails(process);
+
+    if (!mounted) return;
     Navigator.of(context).pop(); // Close loading dialog
 
     if (details == null) {

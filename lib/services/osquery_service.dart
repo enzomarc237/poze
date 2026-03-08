@@ -24,7 +24,7 @@ class OsqueryService {
       ['--json', 'SELECT pid, name, path, cpu_time FROM processes;'],
     );
     if (result.exitCode != 0) {
-      throw Exception('osqueryi error: \\${result.stderr}');
+      throw Exception('osqueryi error: ${result.stderr}');
     }
     final rows = jsonDecode(result.stdout) as List<dynamic>;
     return rows
@@ -51,7 +51,7 @@ class OsqueryService {
       ['--json', 'SELECT name, bundle_identifier, path, version FROM apps;'],
     );
     if (result.exitCode != 0) {
-      throw Exception('osqueryi error: \\${result.stderr}');
+      throw Exception('osqueryi error: ${result.stderr}');
     }
     final rows = jsonDecode(result.stdout) as List<dynamic>;
     return rows
